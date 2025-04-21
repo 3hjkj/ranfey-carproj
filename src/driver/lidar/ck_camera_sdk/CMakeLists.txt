@@ -3,7 +3,7 @@ project(ck_camera_sdk)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_SKIP_RPATH TRUE)
+# set(CMAKE_SKIP_RPATH TRUE)
 
 # ─── 依赖包 ───────────────────────────────────────────
 find_package(ament_cmake REQUIRED)
@@ -50,7 +50,7 @@ install(TARGETS camera_node
 install(DIRECTORY launch
   DESTINATION share/${PROJECT_NAME})
 
-install(DIRECTORY include/  DESTINATION include)
-install(DIRECTORY lib/      DESTINATION lib)
+# install(DIRECTORY include/  DESTINATION include)
+# install(DIRECTORY lib/      DESTINATION lib)
 
 ament_package()

@@ -25,5 +25,7 @@
   <depend>can_control_msgs</depend>
   <depend>lidar_msgs</depend>
 
-  <export></export>
+    <export>
+    <build_type>ament_cmake</build_type>
+  </export>
 </package>
