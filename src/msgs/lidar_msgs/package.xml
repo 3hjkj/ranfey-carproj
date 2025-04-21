@@ -1,0 +1,27 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>lidar_msgs</name>
+  <version>0.0.1</version>
+  <description>Custom lidar message definitions</description>
+
+  <maintainer email="wangjiang@todo.todo">wangjiang</maintainer>
+  <license>MIT</license>
+
+  <!-- 构建系统 -->
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <!-- 依赖项 -->
+  <build_depend>rosidl_default_generators</build_depend>
+  <build_depend>std_msgs</build_depend>
+
+  <exec_depend>rosidl_default_runtime</exec_depend>
+  <exec_depend>std_msgs</exec_depend>
+
+  <!-- 表示本包是一个 ROS 2 消息包 -->
+  <member_of_group>rosidl_interface_packages</member_of_group>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>
+

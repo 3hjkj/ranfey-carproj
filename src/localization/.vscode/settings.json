@@ -1,0 +1,19 @@
+{
+    "files.associations": {
+        "*.py": "python",
+        "string": "cpp",
+        "exception": "cpp",
+        "stdexcept": "cpp",
+        "cwchar": "cpp",
+        "cctype": "cpp",
+        "compare": "cpp",
+        "cstdint": "cpp",
+        "cstdlib": "cpp",
+        "algorithm": "cpp",
+        "memory_resource": "cpp",
+        "iosfwd": "cpp",
+        "new": "cpp",
+        "type_traits": "cpp",
+        "typeinfo": "cpp"
+    }
+}

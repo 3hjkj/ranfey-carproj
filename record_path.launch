@@ -1,0 +1,9 @@
+<launch>
+
+    <node pkg="gps_localization" exec="gps_localization" name="gps_localization" output="screen">
+    </node>
+    <node pkg="control_node" exec="control_node" name="control_node" output="screen">
+    </node>
+    <node pkg="route_record" exec="gps_route_record_trans_node" name="gps_route_record_trans_node" output="screen">
+    </node>
+</launch>

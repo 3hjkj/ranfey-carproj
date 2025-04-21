@@ -1,0 +1,28 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>decision_planning_msgs</name>
+  <version>0.0.1</version>
+  <description>Message definitions for decision planning module</description>
+
+  <maintainer email="weiluo@todo.todo">weiluo</maintainer>
+  <license>MIT</license>
+
+  <!-- 构建工具 -->
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <!-- 构建依赖项 -->
+  <build_depend>rosidl_default_generators</build_depend>
+  <build_depend>std_msgs</build_depend>
+
+  <!-- 运行依赖项 -->
+  <exec_depend>rosidl_default_runtime</exec_depend>
+  <exec_depend>std_msgs</exec_depend>
+
+  <!-- 生成消息接口标记 -->
+  <member_of_group>rosidl_interface_packages</member_of_group>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>
+

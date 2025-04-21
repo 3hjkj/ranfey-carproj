@@ -1,0 +1,1 @@
+echo nvidia | sudo ifconfig can0 down

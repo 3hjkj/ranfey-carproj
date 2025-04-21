@@ -1,0 +1,25 @@
+<?xml version="1.0"?>
+<package format="3">
+
+  <member_of_group>rosidl_interface_packages</member_of_group>
+  <name>control_node</name>
+  <version>0.0.0</version>
+  <description>The control_node package</description>
+
+  <maintainer email="dengzhangzhen@todo.todo">dengzhangzhen</maintainer>
+  <license>TODO</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <!-- ROS2不再使用 message_generation/message_runtime -->
+  <depend>rclcpp</depend>
+  <depend>decision_planning_msgs</depend>
+  <depend>can_control_msgs</depend>
+  <depend>localization_msgs</depend>
+  <depend>geometry_msgs</depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>
+

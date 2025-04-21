@@ -1,0 +1,10 @@
+<launch>
+<include file ="/home/dengzhangzhen/demon/software/src/mapread/launch/mapread.launch"/>
+<include file = "/home/dengzhangzhen/demon/software/src/radobject/launch/radobject.launch"/>
+<include file = "/home/dengzhangzhen/demon/software/src/vehicle/launch/vehcle.launch"/>
+<include file = "/home/dengzhangzhen/demon/software/src/eth_data/launch/eth_data_lch.launch"/>
+<node name ="can_com_pub" pkg = "can_com" type ="can_com_pub" output = "screen"/> 
+<node name ="can_com_sub" pkg = "can_com" type ="can_com_sub" output = "screen"/> 
+<node name ="radobject_pub" pkg = "can_com" type ="radobject_pub" output = "screen"/> 
+<node name ="radobject_sub" pkg = "can_com" type ="radobject_sub" output = "screen"/> 
+</launch>

@@ -1,0 +1,28 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>can_control_msgs</name>
+  <version>0.0.0</version>
+  <description>Message definitions for control interface.</description>
+
+  <maintainer email="wangjiang@todo.todo">wangjiang</maintainer>
+  <license>MIT</license>
+
+  <!-- 构建工具 -->
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <!-- 消息生成相关 -->
+  <build_depend>rosidl_default_generators</build_depend>
+  <exec_depend>rosidl_default_runtime</exec_depend>
+
+  <!-- 依赖的消息类型 -->
+  <depend>std_msgs</depend>
+  <depend>geometry_msgs</depend>
+
+  <!-- 让 colcon 能识别这是一个接口包 -->
+  <member_of_group>rosidl_interface_packages</member_of_group>
+
+  <export>
+    <!-- 如果有 C++ 库等，添加额外导出 -->
+  </export>
+</package>
+

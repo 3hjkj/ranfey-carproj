@@ -1,0 +1,29 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>ck_camera_sdk</name>
+  <version>0.0.2</version>
+  <description>Camera SDK wrapper with OpenCV publishing (ROS 2 Humble)</description>
+
+  <maintainer email="2219349024@qq.com">ranfey</maintainer>
+  <license>MIT</license>
+
+  <!-- 构建工具 -->
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <!-- 运行/编译依赖 -->
+  <depend>rclcpp</depend>
+  <depend>sensor_msgs</depend>
+  <depend>cv_bridge</depend>
+  <depend>image_transport</depend>
+  <depend>std_msgs</depend>
+  <depend>OpenCV</depend>
+
+  <!-- 若仍需要以下自定义消息可保留 -->
+  <depend>geometry_msgs</depend>
+  <depend>decision_planning_msgs</depend>
+  <depend>localization_msgs</depend>
+  <depend>can_control_msgs</depend>
+  <depend>lidar_msgs</depend>
+
+  <export></export>
+</package>
