@@ -1,0 +1,9 @@
+float32 RX
+float32 RY
+float32 RZ
+float32 TX
+float32 TY
+float32 TZ
+int8    flag
+---
+bool status

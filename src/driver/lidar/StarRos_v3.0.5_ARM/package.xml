@@ -1,0 +1,34 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>rfans_driver</name>
+  <version>0.1.0</version>
+  <description>R-Fans lidar driver migrated to ROS 2</description>
+
+  <maintainer email="bkth@isurestar.com">bkth</maintainer>
+  <license>BSD</license>
+  <depend>message_filters</depend>
+
+
+  <!-- 构建工具 -->
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <!-- 构建时 & 运行时依赖（用  *exec_depend*  一次性即可） -->
+  <exec_depend>rclcpp</exec_depend>
+  <exec_depend>std_msgs</exec_depend>
+  <exec_depend>sensor_msgs</exec_depend>
+  <exec_depend>geometry_msgs</exec_depend>
+  <exec_depend>rviz_common</exec_depend>
+  <exec_depend>qt5-qtbase</exec_depend>
+  <exec_depend>pcap</exec_depend>
+
+  <!-- 接口描述 -->
+  <build_depend>rosidl_default_generators</build_depend>
+  <exec_depend>rosidl_default_runtime</exec_depend>
+
+  <!-- 导出 RViz2 插件 -->
+  <export>
+    <rviz_plugin plugin="${prefix}/plugin_description.xml"/>
+    <build_type>ament_cmake</build_type>
+  </export>
+  <member_of_group>rosidl_interface_packages</member_of_group>
+</package>
