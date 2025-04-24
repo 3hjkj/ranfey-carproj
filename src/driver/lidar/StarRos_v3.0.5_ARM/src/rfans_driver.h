@@ -4,6 +4,7 @@
 #include <rclcpp/rclcpp.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
 #include <rfans_driver/msg/command.hpp>
+#include <fstream>
 
 #include "ioapi.h"
 #include "lidar_sdk/sdk_interface.h"

@@ -1,9 +1,8 @@
-<library path="librviz_teleop_commander">
-  <class name="rviz_teleop_commander/TeleopPanel"
-         type="rviz_teleop_commander::TeleopPanel"
-         base_class_type="rviz_common::Panel">
-    <description>
-      A panel widget allowing control of RFans/CFans device.
-    </description>
+<library path="teleop_pad">
+  <class
+      name="rviz_teleop_commander::TeleopPanel"
+      type="rviz_teleop_commander::TeleopPanel"
+      base_class_type="rviz_common::Panel">
+    <description>Teleop panel ported to ROS 2.</description>
   </class>
 </library>

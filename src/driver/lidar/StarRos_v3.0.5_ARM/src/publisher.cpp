@@ -216,13 +216,16 @@ int main(int argc, char **argv)
   RTY[0]=R(1,0); RTY[1]=R(1,1); RTY[2]=R(1,2); RTY[3]=NUM[4];
   RTZ[0]=R(2,0); RTZ[1]=R(2,1); RTZ[2]=R(2,2); RTZ[3]=NUM[5];
 
-  // 5. 实例化驱动（假设已在 ROS 2 下兼容）
-  auto driver = std::make_shared<rfans_driver::Rfans_Driver>(node);
+  // 5. 实例化驱动
+  auto driver_node = std::make_shared<rfans_driver::Rfans_Driver>(
+    rclcpp::NodeOptions().allow_undeclared_parameters(true) );
+
 
   // 6. 用定时器周期性调用 spinOnce()
-  auto timer = node->create_wall_timer(
-    std::chrono::milliseconds(10),
-    [driver]() { driver->spinOnce(); }
+  rclcpp::TimerBase::SharedPtr timer = node->create_wall_timer(
+    10ms,
+    [driver_node]() { driver_node->spinOnce(); }   // <-- 加 value 捕获
+    // 或者 [&] { driver->spinOnce(); }  // 整个外部引用都捕获
   );
 
   // 7. 进入 ROS 2 事件循环

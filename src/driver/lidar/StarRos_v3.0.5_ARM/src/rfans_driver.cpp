@@ -19,6 +19,7 @@
 #include "rfans_driver.h"
 #include "rfans_driver/srv/rfans_command.hpp"
 #include "rfans_driver/msg/rfans_scan.hpp"
+#include <sensor_msgs/msg/point_cloud2.hpp>
 #include <thread>
 #include <chrono>
 #include <sys/time.h>
@@ -126,7 +127,7 @@ void Rfans_Driver::stopDevice()
   params.dataFormat = lidarAPi::eFormatCalcData;
   params.scnSpeed =ANGLE_SPEED_0HZ_cfan;//stop
   progSet(params);
-  ROS_INFO("%s device stop",m_input_para.device_ip.c_str());
+  RCLCPP_INFO(rclcpp::get_logger("rfans_driver"), "%s device stop", m_input_para.device_ip.c_str());
 }
 
 
@@ -204,7 +205,7 @@ Rfans_Driver::Rfans_Driver(const rclcpp::NodeOptions & opt)
   subCommond = this->create_subscription<rfans_driver::msg::Command>(
                 "contrlComand", 10,
                 [&](const rfans_driver::msg::Command::SharedPtr msg){
-                  CommandHandle(*msg);
+                  CommandHandle(msg);
                 });
 
   InitPointcloud2(original_ros_cloud);
@@ -222,7 +223,8 @@ Rfans_Driver::Rfans_Driver(const rclcpp::NodeOptions & opt)
     //如果多台雷达启动的时候，从multi_lidar.launch获取该参数
     //如果启动单雷达设备的launch文件，默认设置为ture
     bool device_start;
-    nh.param<bool>("Is_Start",device_start,true);
+    this->declare_parameter<bool>("Is_Start", true);
+    this->get_parameter("Is_Start", device_start);
     if(device_start)//normal start
     {
       //设置isf文件列表
@@ -238,23 +240,27 @@ Rfans_Driver::Rfans_Driver(const rclcpp::NodeOptions & opt)
     this->socketInit();//初始化socket
     m_is_real_time=1;
     bool mutli_Start;
-    if(ros::param::get("/mult_lidar",mutli_Start))//启动多台雷达
+    if (this->get_parameter("/mult_lidar", mutli_Start)) // 启动多台雷达
     {
-      //如果多台雷达启动的时候，multi_lidar.launch含有这个参数，默认值设置为false，由配置参数中获取真值
-      bool device_start;
-      nh.param<bool>("Is_Start",device_start,false);
-      if(device_start)//normal start
+      // 如果多台雷达启动的时候，multi_lidar.launch 含有这个参数，默认值设置为 false，由配置参数中获取真值
+      rclcpp::Parameter device_start_param;
+      bool device_start = false;
+      if (this->get_parameter("Is_Start", device_start_param)) {
+        device_start = device_start_param.as_bool();
+      }
+
+      if (device_start) // normal start
       {
         configDeviceParams();
-        ROS_INFO("%s normal start",m_input_para.device_ip.c_str());
+        RCLCPP_INFO(this->get_logger(), "%s normal start", m_input_para.device_ip.c_str());
       }
       else {
-        stopDevice();//stop device
+        stopDevice(); // stop device
       }
     }
-    else//启动单台雷达
+    else // 启动单台雷达
     {
-      configDeviceParams();//speed control command writing
+      configDeviceParams(); // speed control command writing
     }
     std::thread temper_thd=thread(&Rfans_Driver::getTemperFrHeart,this);
     temper_thd.detach();
@@ -270,13 +276,13 @@ Rfans_Driver::Rfans_Driver(const rclcpp::NodeOptions & opt)
     if(!save_xyz_file.is_open())
     {
       m_input_para.save_xyz=false;
-      ROS_WARN("save_xyz is failure");
+      RCLCPP_WARN(this->get_logger(), "save_xyz is failure");
     }
   }
   if(m_input_para.save_isf)
   {
     if(creatIsf(m_input_para.isf_path)<0)
-      ROS_INFO("ISF open faliure");
+      RCLCPP_INFO(this->get_logger(), "ISF open failure");
     else
       m_is_isf=true;
   }
@@ -306,27 +312,29 @@ int Rfans_Driver::creatIsf(string path)
     return -1;
 }
 
-
 void Rfans_Driver::getTemperFrHeart()
 {
-  float temper=0.0;
-  while (true)
+  float temper = 0.0;
+  while (rclcpp::ok())
   {
-    if(m_heart_socket->read((unsigned char*)&m_heart,sizeof(m_heart))==256)
+    if(m_heart_socket->read((unsigned char*)&m_heart, sizeof(m_heart)) == 256)
     {
-      temper=m_heart.temperature/100.0;
+      temper = m_heart.temperature / 100.0;
     }
-    ROS_WARN("temperature=%f",temper);
-    ROS_INFO("DEVICE_id=%d",m_heart.device_id);
-    std::this_thread::sleep_for(chrono::seconds(10));
+    // 使用RCLCPP日志宏并传入logger
+    RCLCPP_WARN(get_logger(), "temperature=%f", temper);
+    RCLCPP_INFO(get_logger(), "DEVICE_id=%d", m_heart.device_id);
+    // 确保chrono使用标准命名空间
+    std::this_thread::sleep_for(std::chrono::seconds(10));
   }
 }
 
+
 void Rfans_Driver::socketInit()
 {
-  m_ctl_socket   =new rfans_driver::IOSocketAPI(m_input_para.device_ip, m_input_para.msgport, m_input_para.msgport);
-  m_data_socket  =new rfans_driver::IOSocketAPI(m_input_para.device_ip, m_input_para.dataport, m_input_para.dataport);
-  m_heart_socket =new rfans_driver::IOSocketAPI(m_input_para.device_ip, m_input_para.heart_port, m_input_para.heart_port);
+  m_ctl_socket   =new rfans_driver::IOSocketAPI(this->shared_from_this(), m_input_para.device_ip, m_input_para.msgport, m_input_para.msgport);
+  m_data_socket  =new rfans_driver::IOSocketAPI(this->shared_from_this(), m_input_para.device_ip, m_input_para.dataport, m_input_para.dataport);
+  m_heart_socket =new rfans_driver::IOSocketAPI(this->shared_from_this(), m_input_para.device_ip, m_input_para.heart_port, m_input_para.heart_port);
 }
 Rfans_Driver::~Rfans_Driver()
 {
@@ -427,14 +435,14 @@ void Rfans_Driver::rosCloundPulish()
 {
   if(m_input_para.display_mode=="overlay")
   {
-    original_ros_cloud.header.stamp = ros::Time::now();
+    original_ros_cloud.header.stamp = this->now();                 // ①
     original_ros_cloud.width = m_cur_count;
     int data_size=original_ros_cloud.point_step*original_ros_cloud.width;
     original_ros_cloud.data.resize(data_size);
     original_ros_cloud.row_step = original_ros_cloud.data.size();
     memcpy(&original_ros_cloud.data[0] , &buff_original_cloud[0], data_size );
     pub_cloud->publish(original_ros_cloud);
-    ros::spinOnce();//通知ROS进行接收
+    rclcpp::spin_some(this->get_node_base_interface());
   }else if (m_input_para.display_mode=="pipeline")
   {
     static bool firstFlag=true;
@@ -457,7 +465,7 @@ void Rfans_Driver::rosCloundPulish()
         auto length2=buff_restruct_cloud[1].size();
         auto length3=buff_restruct_cloud[2].size();
         auto length4=buff_restruct_cloud[3].size();
-        restruct_ros_cloud.header.stamp = ros::Time::now();
+        restruct_ros_cloud.header.stamp = this->now();    
         restruct_ros_cloud.width = length1+length2+length3+length4;
         restruct_ros_cloud.data.resize( restruct_ros_cloud.point_step*restruct_ros_cloud.width);
         restruct_ros_cloud.row_step = restruct_ros_cloud.data.size();
@@ -466,7 +474,7 @@ void Rfans_Driver::rosCloundPulish()
         memcpy(restruct_ros_cloud.data.data()+length1*sizeof (TransClound_S)+length2*sizeof (TransClound_S), buff_restruct_cloud[2].data(), length3*sizeof (TransClound_S));
         memcpy(restruct_ros_cloud.data.data()+length1*sizeof (TransClound_S)+length2*sizeof (TransClound_S)+length3*sizeof (TransClound_S) , buff_restruct_cloud[3].data(), length4*sizeof (TransClound_S));
         pub_cloud->publish(restruct_ros_cloud);
-        ros::spinOnce();
+        rclcpp::spin_some(this->get_node_base_interface());
       }
     }
 
@@ -477,14 +485,14 @@ void Rfans_Driver::rosCloundPulish()
     {
       if(numMirror[i]==0)
         continue;
-      restruct_ros_cloud.header.stamp = ros::Time::now();
+        restruct_ros_cloud.header.stamp = this->now();       
       restruct_ros_cloud.width = numMirror[i];
       int data_size=restruct_ros_cloud.point_step*restruct_ros_cloud.width;
       restruct_ros_cloud.data.resize(data_size);
       restruct_ros_cloud.row_step = restruct_ros_cloud.data.size();
       memcpy(&restruct_ros_cloud.data[0] , buff_mirror_cloud[i].data(), data_size);
       pub_cloud->publish(restruct_ros_cloud);
-      ros::spinOnce();
+      rclcpp::spin_some(this->get_node_base_interface());
       std::this_thread::sleep_for(chrono::milliseconds(1));
     }
   }
@@ -643,8 +651,8 @@ int Rfans_Driver::playBackMode()
   int buff_surplus = 0;//统计多文件未消耗的数据量
 
   m_sdk_para.cfg_opt.cfg_Itn  =CFG_AND_RAW_FILE;      //  文件头或配置文件
-  ros::Rate rate_loop(m_input_para.scnSpeed);
-  ROS_INFO("rate_loop=%d",m_input_para.scnSpeed);
+  rclcpp::Rate rate_loop(static_cast<double>(m_input_para.scnSpeed));
+  RCLCPP_INFO(this->get_logger(), "rate_loop=%d", m_input_para.scnSpeed);
   //多文件循环解算
   for (size_t fileNum = 0; fileNum < m_file_list.size(); fileNum++)
   {
@@ -655,7 +663,8 @@ int Rfans_Driver::playBackMode()
     if(m_input_para.device_name=="CK-128")
       ((float*)header_buff)[ADR_D_DEVICE_ID]=0XA0;
     int deviceID = ((float*)header_buff)[ADR_D_DEVICE_ID];
-    ROS_INFO("deviceID=%d",deviceID);
+    RCLCPP_INFO(this->get_logger(), "deviceID=%d", deviceID);
+
     m_sdk_obj._dec_ptr->setMetaHeader(header_buff, ISF_HEADER); 	//解码初始化
     //（2）读快数据
     int rtn =m_sdk_obj._io_ptr->openLidarFile((char*)m_file_list.at(fileNum).c_str(),m_sdk_para.io_para);
@@ -765,14 +774,15 @@ int Rfans_Driver::spinOnce()
     }
   }else
   {
-    ROS_INFO("END OF SINGLE PLAY");
+    RCLCPP_INFO(this->get_logger(), "END OF SINGLE PLAY");
+
     usleep(1000);
     return 0;
   }
 
 }
 
-void Rfans_Driver::InitPointcloud2(sensor_msgs::PointCloud2 &initCloud)
+void Rfans_Driver::InitPointcloud2(sensor_msgs::msg::PointCloud2 &initCloud)
 {
 
   static const size_t DataSize = 0;

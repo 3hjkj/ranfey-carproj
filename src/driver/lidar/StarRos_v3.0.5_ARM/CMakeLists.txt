@@ -62,7 +62,7 @@ add_executable(driver_node
   src/ssFrameLib.cpp
   src/common.cpp
 )
-ament_target_dependencies(driver_node rclcpp std_msgs sensor_msgs message_filters)
+ament_target_dependencies(driver_node rclcpp std_msgs geometry_msgs sensor_msgs message_filters)
 target_link_libraries(driver_node ${LIB_GATHER} ${PCAP_LIBRARIES} Qt5::Widgets)
 rosidl_target_interfaces(driver_node ${PROJECT_NAME} "rosidl_typesupport_cpp")
 
@@ -72,7 +72,7 @@ add_executable(heart_node
   src/ssFrameLib.cpp
   src/common.cpp
 )
-ament_target_dependencies(heart_node rclcpp std_msgs message_filters)
+ament_target_dependencies(heart_node rclcpp std_msgs geometry_msgs message_filters)
 target_link_libraries(heart_node ${LIB_GATHER} ${PCAP_LIBRARIES})
 rosidl_target_interfaces(heart_node ${PROJECT_NAME} "rosidl_typesupport_cpp")
 
@@ -87,7 +87,7 @@ rosidl_target_interfaces(u_coordinate ${PROJECT_NAME} "rosidl_typesupport_cpp")
 
 # ⑥ RViz 插件
 add_library(rviz_teleop_commander SHARED src/teleop_pad.cpp)
-ament_target_dependencies(rviz_teleop_commander rviz_common message_filters)
+ament_target_dependencies(rviz_teleop_commander rviz_common geometry_msgs message_filters)
 target_link_libraries(rviz_teleop_commander ${LIB_GATHER} Qt5::Widgets)
 rosidl_target_interfaces(rviz_teleop_commander ${PROJECT_NAME} "rosidl_typesupport_cpp")
 

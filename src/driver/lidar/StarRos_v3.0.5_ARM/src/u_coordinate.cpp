@@ -1,170 +1,221 @@
-﻿#include <rclcpp/rclcpp.hpp>
-#include <sensor_msgs/msg/point_cloud2.hpp>
-#include <message_filters/subscriber.h>
-#include <message_filters/synchronizer.h>
-#include <message_filters/sync_policies/approximate_time.h>
-#include <fstream>
+﻿/*******************************************************
+ * fusion_node.cpp — Multi-LiDAR fusion node, ROS 2 Humble
+ *******************************************************/
 #include <memory>
+#include <fstream>
 #include <vector>
-#include <string>
+#include <array>
+#include <iostream>
 #include <functional>
-#include <boost/bind/bind.hpp>  // 更新版 boost::bind 输入
-using namespace boost::placeholders;  // 避免警告
+#include <cstring>
 
-using sensor_msgs::msg::PointCloud2;
+#include "rclcpp/rclcpp.hpp"
+#include "sensor_msgs/msg/point_cloud2.hpp"
+#include "message_filters/subscriber.h"
+#include "message_filters/synchronizer.h"
+#include "message_filters/sync_policies/approximate_time.h"
 
-class FusionNode : public rclcpp::Node {
-public:
-  FusionNode() : Node("fusion_node") {
-    this->declare_parameter("save_xyz", false);
-    this->declare_parameter("OutExport_path", std::string("/tmp/out.csv"));
-    this->declare_parameter("ns_list", std::vector<std::string>{"ns1", "ns2", "ns3", "ns4"});
+#include "ssFrameLib.h"     // 含 TransClound_S 定义
+#include "ioapi.h"
+#include "rfans_driver.h"
 
-    save_enabled_ = this->get_parameter("save_xyz").as_bool();
-    out_path_ = this->get_parameter("OutExport_path").as_string();
-    ns_list_ = this->get_parameter("ns_list").as_string_array();
+#include <Eigen/Eigen>
+#include <unistd.h>
 
-    fusion_pub_ = this->create_publisher<PointCloud2>("fusion_point", 10);
+using namespace std::placeholders;
+namespace mf = message_filters;
+using  PointCloud2 = sensor_msgs::msg::PointCloud2;
+using  PointCloud2Ptr = PointCloud2::ConstSharedPtr;
 
-    for (const auto &ns : ns_list_) {
-      std::string param_name = "/" + ns + "/rfans_driver/Is_Start";
-      this->declare_parameter(param_name, false);
-      bool start = this->get_parameter(param_name).as_bool();
-      if (start) {
-        active_ns_.push_back(ns);
+/* ------------ 全局变量 ------------ */
+static rclcpp::Publisher<PointCloud2>::SharedPtr fusion_pub;
+static PointCloud2  msg_pub;
+static std::ofstream file;
+static std::vector<int> num_Pub;
+
+/* ------------ PointCloud2 元数据 ------------ */
+void InitPointcloud2(PointCloud2 &c)
+{
+  c.data.clear();
+  c.is_bigendian = false;
+  c.is_dense     = false;
+  c.fields.resize(10);            // 7+3 (最后 3 个按你需要可删)
+  uint32_t off = 0;
+  auto set_f=[&](int i,const std::string &n,uint8_t dt,uint32_t sz){
+     c.fields[i].name=n; c.fields[i].datatype=dt;
+     c.fields[i].offset=off; c.fields[i].count=1; off+=sz; };
+  set_f(0,"x",         7u,4);
+  set_f(1,"y",         7u,4);
+  set_f(2,"z",         7u,4);
+  set_f(3,"intensity", 7u,4);
+  set_f(4,"laserid",   5u,4);
+  set_f(5,"timeflag",  7u,4);
+  set_f(6,"hangle",    7u,4);
+  /* 如确有 pulseWidth/range/rol/mirrorid，请自行打开
+  set_f(7,"pulseWidth",7u,4);
+  set_f(8,"range",     7u,4);
+  set_f(9,"rol",       5u,4);
+  */
+  c.height      = 1;
+  c.point_step  = sizeof(TransClound_S);
+  c.row_step    = 0;
+  c.width       = 0;
+  c.header.frame_id = "world";
+}
+
+/* ------------ 帮助函数 ------------ */
+inline void fill_and_pub(PointCloud2 &out,
+                         const std::vector<const PointCloud2*> &ins)
+{
+  out.header.stamp = rclcpp::Clock().now();
+  out.height       = 1;
+  out.point_step   = sizeof(TransClound_S);
+  size_t total = 0; for(auto p:ins) total+=p->width;
+  out.width = total;
+  out.data.resize(total * out.point_step);
+  out.row_step = out.data.size();
+  size_t cursor=0;
+  for(auto p:ins){
+    std::memcpy(out.data.data()+cursor, p->data.data(), p->data.size());
+    cursor += p->data.size();
+  }
+  fusion_pub->publish(out);
+}
+inline void dump_cloud(const PointCloud2Ptr &pc)
+{
+  const auto *ptr = reinterpret_cast<const TransClound_S*>(pc->data.data());
+  for(uint32_t i=0;i<pc->width;++i){
+    file<<ptr[i].x<<','<<ptr[i].y<<','<<ptr[i].z<<','
+        <<ptr[i].intent<<','<<ptr[i].timeflag<<','
+        <<ptr[i].laserid<<','<<ptr[i].hangle
+        /* 若真有 mirrorid 字段 → “<<','<<ptr[i].mirrorid” */
+        <<'\n';
+  }
+}
+
+/* ---------- pub 回调 ---------- */
+void pub1 (const PointCloud2Ptr &a){ fill_and_pub(msg_pub,{a.get()}); }
+void pub2 (const PointCloud2Ptr &a,const PointCloud2Ptr &b){
+  fill_and_pub(msg_pub,{a.get(),b.get()}); }
+void pub3 (const PointCloud2Ptr &a,const PointCloud2Ptr &b,
+           const PointCloud2Ptr &c){
+  fill_and_pub(msg_pub,{a.get(),b.get(),c.get()}); }
+void pub4 (const PointCloud2Ptr &a,const PointCloud2Ptr &b,
+           const PointCloud2Ptr &c,const PointCloud2Ptr &d){
+  fill_and_pub(msg_pub,{a.get(),b.get(),c.get(),d.get()}); }
+
+/* ---------- save 回调 ---------- */
+void save1(const PointCloud2Ptr &a){ dump_cloud(a); }
+void save2(const PointCloud2Ptr &a,const PointCloud2Ptr &b){
+  dump_cloud(a); dump_cloud(b); }
+void save3(const PointCloud2Ptr &a,const PointCloud2Ptr &b,
+           const PointCloud2Ptr &c){
+  dump_cloud(a); dump_cloud(b); dump_cloud(c); }
+void save4(const PointCloud2Ptr &a,const PointCloud2Ptr &b,
+           const PointCloud2Ptr &c,const PointCloud2Ptr &d){
+  dump_cloud(a); dump_cloud(b); dump_cloud(c); dump_cloud(d); }
+
+/* ---------- 指针别名，方便 static_cast ---------- */
+using CB1 = void(*)(const PointCloud2Ptr &);
+using CB2 = void(*)(const PointCloud2Ptr &,const PointCloud2Ptr &);
+using CB3 = void(*)(const PointCloud2Ptr &,const PointCloud2Ptr &,
+                   const PointCloud2Ptr &);
+using CB4 = void(*)(const PointCloud2Ptr &,const PointCloud2Ptr &,
+                   const PointCloud2Ptr &,const PointCloud2Ptr &);
+
+/* =================================================== */
+int main(int argc,char **argv)
+{
+  rclcpp::init(argc,argv);
+  auto node = rclcpp::Node::make_shared("fusion_node");
+
+  InitPointcloud2(msg_pub);
+  fusion_pub = node->create_publisher<PointCloud2>("fusion_point",10);
+
+  const std::vector<std::string> topics={
+      "/ns1/lidar_points","/ns2/lidar_points",
+      "/ns3/lidar_points","/ns4/lidar_points"};
+
+  /* 读取“是否启用”参数 */
+  const std::array<std::string,4> keys={
+      "ns1.rfans_driver.Is_Start","ns2.rfans_driver.Is_Start",
+      "ns3.rfans_driver.Is_Start","ns4.rfans_driver.Is_Start"};
+  bool start[4]{};
+  for(int i=0;i<4;++i){
+    node->declare_parameter<bool>(keys[i],false);
+    node->get_parameter(keys[i],start[i]);
+    if(start[i]) num_Pub.push_back(i);
+  }
+
+  bool save=node->declare_parameter<bool>("save_xyz",false);
+  std::string path=node->declare_parameter<std::string>(
+      "OutExport_path","/tmp/out.txt");
+  if(save){
+    file.open(path);
+    file<<"x,y,z,intensity,timeflag,laserid,hangle\n";  //7列
+  }
+
+  auto qos = rclcpp::SensorDataQoS();
+
+  /* =========== 不同雷达数量分支 =========== */
+  switch(num_Pub.size()){
+    case 1:{
+      node->create_subscription<PointCloud2>(
+        topics[num_Pub[0]], qos,
+        static_cast<CB1>(&pub1));
+      if(save){
+        node->create_subscription<PointCloud2>(
+          topics[num_Pub[0]], qos,
+          static_cast<CB1>(&save1));
       }
+      break;
     }
-
-    if (save_enabled_) {
-      file_.open(out_path_);
-      file_ << "x,y,z,intent,timeflag,laserid,hangle,mirrorid\n";
+    case 2:{
+      using Sync = mf::sync_policies::ApproximateTime<PointCloud2,PointCloud2>;
+      mf::Subscriber<PointCloud2> s1(node,topics[num_Pub[0]],qos.get_rmw_qos_profile());
+      mf::Subscriber<PointCloud2> s2(node,topics[num_Pub[1]],qos.get_rmw_qos_profile());
+      auto sync = std::make_shared<mf::Synchronizer<Sync>>(Sync(10),s1,s2);
+      sync->registerCallback(static_cast<CB2>(&pub2));
+      if(save){
+        auto sync_s = std::make_shared<mf::Synchronizer<Sync>>(Sync(10),s1,s2);
+        sync_s->registerCallback(static_cast<CB2>(&save2));
+      }
+      break;
     }
-
-    setup_subscribers();
-  }
-
-private:
-  void callback_pub(const PointCloud2::ConstSharedPtr &p1) {
-    publish_and_save({p1});
-  }
-
-  void callback_pub(const PointCloud2::ConstSharedPtr &p1, const PointCloud2::ConstSharedPtr &p2) {
-    publish_and_save({p1, p2});
-  }
-
-  void callback_pub(const PointCloud2::ConstSharedPtr &p1, const PointCloud2::ConstSharedPtr &p2, const PointCloud2::ConstSharedPtr &p3) {
-    publish_and_save({p1, p2, p3});
-  }
-
-  void callback_pub(const PointCloud2::ConstSharedPtr &p1, const PointCloud2::ConstSharedPtr &p2,
-                    const PointCloud2::ConstSharedPtr &p3, const PointCloud2::ConstSharedPtr &p4) {
-    publish_and_save({p1, p2, p3, p4});
-  }
-
-  void publish_and_save(const std::vector<PointCloud2::ConstSharedPtr>& clouds) {
-    if (clouds.empty()) return;
-
-    PointCloud2 fused;
-    fused.header.frame_id = "world";
-    fused.header.stamp = this->get_clock()->now();
-    fused.height = 1;
-    fused.point_step = clouds[0]->point_step;
-    fused.width = 0;
-
-    size_t total_size = 0;
-    for (const auto& c : clouds) {
-      fused.width += c->width;
-      total_size += c->data.size();
+    case 3:{
+      using Sync = mf::sync_policies::ApproximateTime<PointCloud2,PointCloud2,PointCloud2>;
+      mf::Subscriber<PointCloud2> s1(node,topics[num_Pub[0]],qos.get_rmw_qos_profile());
+      mf::Subscriber<PointCloud2> s2(node,topics[num_Pub[1]],qos.get_rmw_qos_profile());
+      mf::Subscriber<PointCloud2> s3(node,topics[num_Pub[2]],qos.get_rmw_qos_profile());
+      auto sync = std::make_shared<mf::Synchronizer<Sync>>(Sync(10),s1,s2,s3);
+      sync->registerCallback(static_cast<CB3>(&pub3));
+      if(save){
+        auto sync_s = std::make_shared<mf::Synchronizer<Sync>>(Sync(10),s1,s2,s3);
+        sync_s->registerCallback(static_cast<CB3>(&save3));
+      }
+      break;
     }
-    fused.data.resize(total_size);
-    fused.row_step = total_size;
-
-    size_t offset = 0;
-    for (const auto& c : clouds) {
-      std::copy(c->data.begin(), c->data.end(), fused.data.begin() + offset);
-      offset += c->data.size();
+    case 4:{
+      using Sync = mf::sync_policies::ApproximateTime<PointCloud2,PointCloud2,PointCloud2,PointCloud2>;
+      mf::Subscriber<PointCloud2> s1(node,topics[num_Pub[0]],qos.get_rmw_qos_profile());
+      mf::Subscriber<PointCloud2> s2(node,topics[num_Pub[1]],qos.get_rmw_qos_profile());
+      mf::Subscriber<PointCloud2> s3(node,topics[num_Pub[2]],qos.get_rmw_qos_profile());
+      mf::Subscriber<PointCloud2> s4(node,topics[num_Pub[3]],qos.get_rmw_qos_profile());
+      auto sync = std::make_shared<mf::Synchronizer<Sync>>(Sync(10),s1,s2,s3,s4);
+      sync->registerCallback(static_cast<CB4>(&pub4));
+      if(save){
+        auto sync_s = std::make_shared<mf::Synchronizer<Sync>>(Sync(10),s1,s2,s3,s4);
+        sync_s->registerCallback(static_cast<CB4>(&save4));
+      }
+      break;
     }
-    fusion_pub_->publish(fused);
-
-    if (save_enabled_ && file_.is_open()) {
-      file_ << "# saved frame with " << fused.width << " points\n";
-    }
+    default:
+      RCLCPP_ERROR(node->get_logger(),"No lidar enabled, node exits.");
+      rclcpp::shutdown();
+      return 1;
   }
 
-  void setup_subscribers() {
-    using namespace message_filters;
-
-    switch (active_ns_.size()) {
-      case 0:
-        RCLCPP_WARN(this->get_logger(), "没有启用的雷达节点");
-        break;
-      case 1:
-        sub1_ = std::make_shared<Subscriber<PointCloud2>>(this, "/" + active_ns_[0] + "/lidar_points");
-        sub1_->registerCallback(std::bind(static_cast<void(FusionNode::*)(const PointCloud2::ConstSharedPtr&)>(&FusionNode::callback_pub), this, _1));
-        break;
-      case 2:
-        init_sub_sync<2>();
-        break;
-      case 3:
-        init_sub_sync<3>();
-        break;
-      default:
-        init_sub_sync<4>();
-        break;
-    }
-  }
-
-  template<int N>
-  void init_sub_sync();
-
-  rclcpp::Publisher<PointCloud2>::SharedPtr fusion_pub_;
-  std::vector<std::string> ns_list_;
-  std::vector<std::string> active_ns_;
-  std::ofstream file_;
-  std::string out_path_;
-  bool save_enabled_ = false;
-
-  std::shared_ptr<message_filters::Subscriber<PointCloud2>> sub1_, sub2_, sub3_, sub4_;
-  std::shared_ptr<message_filters::Synchronizer<message_filters::sync_policies::ApproximateTime<PointCloud2, PointCloud2>>> sync2_;
-  std::shared_ptr<message_filters::Synchronizer<message_filters::sync_policies::ApproximateTime<PointCloud2, PointCloud2, PointCloud2>>> sync3_;
-  std::shared_ptr<message_filters::Synchronizer<message_filters::sync_policies::ApproximateTime<PointCloud2, PointCloud2, PointCloud2, PointCloud2>>> sync4_;
-};
-
-// 模板特化实现
-
-template<>
-void FusionNode::init_sub_sync<2>() {
-  sub1_ = std::make_shared<message_filters::Subscriber<PointCloud2>>(this, "/" + active_ns_[0] + "/lidar_points");
-  sub2_ = std::make_shared<message_filters::Subscriber<PointCloud2>>(this, "/" + active_ns_[1] + "/lidar_points");
-  sync2_ = std::make_shared<message_filters::Synchronizer<message_filters::sync_policies::ApproximateTime<PointCloud2, PointCloud2>>>(
-      message_filters::sync_policies::ApproximateTime<PointCloud2, PointCloud2>(10), *sub1_, *sub2_);
-  sync2_->registerCallback(std::bind(static_cast<void(FusionNode::*)(const PointCloud2::ConstSharedPtr&, const PointCloud2::ConstSharedPtr&)>(&FusionNode::callback_pub), this, _1, _2));
-}
-
-template<>
-void FusionNode::init_sub_sync<3>() {
-  sub1_ = std::make_shared<message_filters::Subscriber<PointCloud2>>(this, "/" + active_ns_[0] + "/lidar_points");
-  sub2_ = std::make_shared<message_filters::Subscriber<PointCloud2>>(this, "/" + active_ns_[1] + "/lidar_points");
-  sub3_ = std::make_shared<message_filters::Subscriber<PointCloud2>>(this, "/" + active_ns_[2] + "/lidar_points");
-  sync3_ = std::make_shared<message_filters::Synchronizer<message_filters::sync_policies::ApproximateTime<PointCloud2, PointCloud2, PointCloud2>>>(
-      message_filters::sync_policies::ApproximateTime<PointCloud2, PointCloud2, PointCloud2>(10), *sub1_, *sub2_, *sub3_);
-  sync3_->registerCallback(std::bind(static_cast<void(FusionNode::*)(const PointCloud2::ConstSharedPtr&, const PointCloud2::ConstSharedPtr&, const PointCloud2::ConstSharedPtr&)>(&FusionNode::callback_pub), this, _1, _2, _3));
-}
-
-template<>
-void FusionNode::init_sub_sync<4>() {
-  sub1_ = std::make_shared<message_filters::Subscriber<PointCloud2>>(this, "/" + active_ns_[0] + "/lidar_points");
-  sub2_ = std::make_shared<message_filters::Subscriber<PointCloud2>>(this, "/" + active_ns_[1] + "/lidar_points");
-  sub3_ = std::make_shared<message_filters::Subscriber<PointCloud2>>(this, "/" + active_ns_[2] + "/lidar_points");
-  sub4_ = std::make_shared<message_filters::Subscriber<PointCloud2>>(this, "/" + active_ns_[3] + "/lidar_points");
-  sync4_ = std::make_shared<message_filters::Synchronizer<message_filters::sync_policies::ApproximateTime<PointCloud2, PointCloud2, PointCloud2, PointCloud2>>>(
-      message_filters::sync_policies::ApproximateTime<PointCloud2, PointCloud2, PointCloud2, PointCloud2>(10), *sub1_, *sub2_, *sub3_, *sub4_);
-  sync4_->registerCallback(std::bind(static_cast<void(FusionNode::*)(const PointCloud2::ConstSharedPtr&, const PointCloud2::ConstSharedPtr&, const PointCloud2::ConstSharedPtr&, const PointCloud2::ConstSharedPtr&)>(&FusionNode::callback_pub), this, _1, _2, _3, _4));
-}
-
-int main(int argc, char **argv) {
-  rclcpp::init(argc, argv);
-  rclcpp::spin(std::make_shared<FusionNode>());
+  rclcpp::spin(node);
   rclcpp::shutdown();
   return 0;
 }
