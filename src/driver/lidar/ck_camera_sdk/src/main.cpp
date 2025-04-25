@@ -41,7 +41,6 @@ int main(int argc, char **argv)
               "CKCamera started — press Ctrl‑C in terminal to quit");
 
   /* ——— 主循环 ——— */
-  rclcpp::Rate loop_rate(30);      // 30 Hz，等价于 waitKey(30)
   while (rclcpp::ok()) {
     stImageInfo info;
     BYTE *pImage = CameraGetImageBufferEx(hCamera, &info, 100);   // 100 ms 超时
@@ -51,19 +50,21 @@ int main(int argc, char **argv)
       /* 转成 ROS2 Image 消息并发布 */
       auto msg = cv_bridge::CvImage(std_msgs::msg::Header(), "bgr8", frame).toImageMsg();
       pub.publish(msg);
+      resize(frame, frame, Size(1920, 1080));
 
-      /* 如果 SDK 要求显式释放则取消下一行注释
-         CameraReleaseImageBufferEx(hCamera, pImage);
-       */
+      imshow("CKCamera Display", frame);
+       
     }
+    int key = waitKey(30);
+    if (key == 27) break;
 
     rclcpp::spin_some(node);   // 处理潜在回调（这里主要是让 Ctrl‑C 生效）
-    loop_rate.sleep();
   }
 
   /* ——— 清理 ——— */
   CameraPause(hCamera);
   CameraUnInit(hCamera);
+  destroyAllWindows();
   rclcpp::shutdown();
   return 0;
 }
