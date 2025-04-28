@@ -18,8 +18,8 @@ namespace perception
         {
         INFO("grid lidar cluster init");
 
-        lidar_preprocess = std::make_shared<LidarPreprocess2>();
-        lidar_cluster_   = std::make_shared<PointsCluster>();
+        lidar_preprocess = std::make_shared<LidarPreprocess2>(node_);
+        lidar_cluster_   = std::make_shared<PointsCluster>(node_);
 
         /* ---------- 1. 调试开关与调试话题 ---------- */
         debug_ = node_->declare_parameter<bool>("debug_objs", true);

@@ -29,7 +29,6 @@ class PointsCluster
 public:
   /* 构造函数需传入节点句柄；析构保持默认 */
   explicit PointsCluster(const rclcpp::Node::SharedPtr& node);
-  ~PointsCluster();
 
   /* 与旧版一致的外部接口：聚类并返回 Objects 消息 */
   lidar_msgs::msg::Objects Pub(const pcl::PointCloud<pcl::PointXYZ>::Ptr& data_in);
