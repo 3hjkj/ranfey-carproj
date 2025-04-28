@@ -1,0 +1,48 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>perception</name>
+  <version>0.0.1</version>
+  <description>Perception node for LiDAR point-cloud preprocessing, clustering and fusion.</description>
+
+  <!-- 维护者 -->
+  <maintainer email="wj@todo.todo">wj</maintainer>
+
+  <!-- 许可证（请按实际情况修改） -->
+  <license>Apache-2.0</license>
+
+  <!-- 主页 / 源码仓库（可选） -->
+  <!-- <url type="website">https://example.com/perception</url> -->
+  <!-- <url type="repository">https://github.com/your_org/perception</url> -->
+
+  <!-- 构建工具：ROS 2 使用 ament_cmake -->
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <!-- 运行时 & 构建期统一依赖（依次写 depend 即可） -->
+  <depend>rclcpp</depend>              <!-- ROS 2 C++ API -->
+  <depend>std_msgs</depend>
+  <depend>sensor_msgs</depend>
+  <depend>geometry_msgs</depend>
+
+  <!-- PCL 与其 ROS 接口 -->
+  <depend>pcl_conversions</depend>
+  <depend>pcl_msgs</depend>
+  <depend>pcl_ros</depend>            <!-- Foxy 之后已移植到 ROS 2 -->
+
+  <!-- 自定义消息包（假设你已迁移它） -->
+  <depend>lidar_msgs</depend>
+
+  <!-- Python 节点或脚本（如果还用到的话） -->
+  <!-- <depend>rclpy</depend> -->
+
+  <!-- 系统依赖：Ubuntu 下的 PCL 开发包 -->
+  <exec_depend>libpcl-dev</exec_depend>
+
+  <!-- 测试 / Lint 建议 -->
+  <test_depend>ament_lint_auto</test_depend>
+  <test_depend>ament_lint_common</test_depend>
+
+  <!-- 其他工具可在 export 区域声明额外信息 -->
+  <export>
+    <!-- 例如：插件描述、build-type、cfgi files 等 -->
+  </export>
+</package>

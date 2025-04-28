@@ -1,0 +1,54 @@
+# perception/launch/perception.launch.py
+# -*- coding: utf-8 -*-
+
+from launch import LaunchDescription
+from launch_ros.actions import Node
+from ament_index_python.packages import get_package_share_directory
+import os
+
+
+def generate_launch_description() -> LaunchDescription:
+    # ── 公共路径 ───────────────────────────────────────────
+    share_dir = get_package_share_directory('perception')
+    cfg_dir   = os.path.join(share_dir, 'config_json')
+    log_dir   = os.path.join(share_dir, 'log')
+    os.makedirs(log_dir, exist_ok=True)           # 若目录不存在则创建
+
+    # ── perception_visualization 节点 ─────────────────────
+    vis_node = Node(
+        package='perception_visualization',
+        executable='vis',
+        name='vis',
+        output='screen'
+    )
+
+    # ── perception 节点及参数 ────────────────────────────
+    perception_params = {
+        'cell_config'       : os.path.join(cfg_dir, 'cell.json'),
+        'obj_config'        : os.path.join(cfg_dir, 'objs.json'),
+        'preprocess_config' : os.path.join(cfg_dir, 'preprocess.json'),
+        'method'            : 1,
+        'topic_name'        : 'fusion',
+        'log_path'          : log_dir + '/',          # 与原 XML 保持一致：目录路径
+        'lidar_topic_name0' : '/rfans_driver/rfans_points',
+        'lidar_topic_name1' : '/ns2/lidar_points',
+        'lidar_topic_name2' : '/ns3/lidar_points',
+        'lidar_topic_name3' : '/ns4/lidar_points',
+        'lidar_topic_name4' : '/ns5/lidar_points',
+    }
+
+    perception_node = Node(
+        package='perception',
+        executable='perception',
+        name='perception',
+        output='screen',
+        parameters=[perception_params],
+        emulate_tty=True          # 终端彩色日志
+        # respawn=False           # 默认即为 False；若需自动重启可设 True
+    )
+
+    # ── 返回 LaunchDescription ───────────────────────────
+    return LaunchDescription([
+        vis_node,
+        perception_node
+    ])
