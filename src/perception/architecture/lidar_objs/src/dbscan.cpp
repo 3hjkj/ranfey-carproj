@@ -33,9 +33,10 @@ namespace perception
             return data_out;
         Init(data_in);
         // 统计每个点周围的点数，为后面筛选核心点、边缘点及噪点做准备
-        double time1 = ros::Time::now().toSec();
+        rclcpp::Clock clock;                     // ROS 2 取时间
+        double time1 = clock.now().seconds();
         CheckNearPoints();
-        double time2 = ros::Time::now().toSec();
+        double time2 = clock.now().seconds();
         // 聚类，将一类的点标记为同一个cluster_idx
         for (int i = 0; i < size_; i++)
         {
@@ -52,7 +53,7 @@ namespace perception
                 points_[i].cluster_idx = DB_NOISE;
             }
         }
-        double time3 = ros::Time::now().toSec();
+        double time3 = clock.now().seconds();
         // 将每一类的id取出来
         cluster_.resize(cluster_idx_ + 1);
         for (int i = 0; i < size_; i++)

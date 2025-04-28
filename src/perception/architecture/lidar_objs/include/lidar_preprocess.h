@@ -8,6 +8,7 @@
 #include "json/include/json.h"
 #include <iomanip>
 #include "common/log.h"
+#include <rclcpp/rclcpp.hpp>
 namespace perception
 {
     namespace lidar_objs
@@ -21,11 +22,11 @@ namespace perception
             //debug
 
             perception::ReadConfigCommon readconfig_;
-            ros::NodeHandle ph;
-            ros::Publisher pub_lidar_radius;
-            ros::Publisher pub_lidar_voxel;
-            ros::Publisher pub_ground_points;
-            ros::Publisher pub_no_ground_points;
+            rclcpp::Node::SharedPtr node_;   //!< 代替 ros::NodeHandle
+            rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr pub_lidar_radius;
+            rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr pub_lidar_voxel;
+            rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr pub_ground_points;
+            rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr pub_no_ground_points;
             bool debug_ = false;
             int row;
             int col;
@@ -43,7 +44,7 @@ namespace perception
                 }
                 if (data_in->empty())
                 {
-                    ROS_ERROR_STREAM("no lidar data grond");
+                    RCLCPP_ERROR_STREAM(node_->get_logger(), "no lidar data ground");
                     return 1;
                 }
                 for (auto &p : data_in->points)
@@ -73,7 +74,7 @@ namespace perception
                     }
                     catch (std::exception &e)
                     {
-                        ROS_DEBUG_STREAM(e.what());
+                        RCLCPP_DEBUG_STREAM(node_->get_logger(), e.what());
                     }
                 }
                 return 0;
@@ -147,7 +148,7 @@ namespace perception
             }
 
         public:
-            LidarPreprocess(/* args */);
+            explicit LidarPreprocess(const rclcpp::Node::SharedPtr& node);
             ~LidarPreprocess();
             int Init();
             int DeleteNanPoints(const pcl::PointCloud<pcl::PointXYZ>::Ptr &lidar_points,
@@ -207,7 +208,7 @@ namespace perception
                     pcl::toROSMsg(*data_out, output);
                     // pcl_conversions::fromPCL(*data_out, output);
                     output.header.frame_id = "world";
-                    pub_lidar_voxel.publish(output);
+                    pub_lidar_voxel->publish(output);
                 }
                 return 0;
             }
@@ -226,7 +227,7 @@ namespace perception
                     pcl::toROSMsg(*data_out, output);
                     // pcl_conversions::fromPCL(*data_out, output);
                     output.header.frame_id = "world";
-                    pub_lidar_radius.publish(output);
+                    pub_lidar_radius->publish(output);
                 }
                 return 0;
             }
@@ -257,8 +258,8 @@ namespace perception
                     output_groud_points.header.frame_id = "world";
                     // output_no_groud_points.header.frame_id = "/rslidar";
                     output_no_groud_points.header.frame_id = "world";
-                    pub_ground_points.publish(output_groud_points);
-                    pub_no_ground_points.publish(output_no_groud_points);
+                    pub_ground_points->publish(output_groud_points);
+                    pub_no_ground_points->publish(output_no_groud_points);
                 }
                 return 0;
             }

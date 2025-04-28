@@ -1,39 +1,43 @@
 #include "architecture/lidar_objs/include/lidar_preprocess.h"
+#include <pcl_conversions/pcl_conversions.h>       // 调试发布用
+/* ---------- 统一日志宏，保持原 INFO/WARN/ERROR 调用 ---------- */
+#define INFO(fmt, ...)  RCLCPP_INFO (node_->get_logger(), fmt, ##__VA_ARGS__)
+#define WARN(fmt, ...)  RCLCPP_WARN (node_->get_logger(), fmt, ##__VA_ARGS__)
+#define ERROR(fmt, ...) RCLCPP_ERROR(node_->get_logger(), fmt, ##__VA_ARGS__)
 namespace perception
 {
     namespace lidar_objs
     {
-        LidarPreprocess::LidarPreprocess(/* args */)
-        {
-        }
+        LidarPreprocess::LidarPreprocess(const rclcpp::Node::SharedPtr& node)
+        : node_(node)                                                    // 保存节点
+        {}
 
-        LidarPreprocess::~LidarPreprocess()
-        {
-        }
+        LidarPreprocess::~LidarPreprocess() = default;
         int LidarPreprocess::Init()
         {
-            // debug
-            INFO("LidarPreprocess Init");
-            if (debug_)
-            {
-                ph = ros::NodeHandle();
-                pub_lidar_voxel = ph.advertise<sensor_msgs::PointCloud2>("/perception/lidar_voxel", 10);
-                pub_lidar_radius = ph.advertise<sensor_msgs::PointCloud2>("/perception/lidar_radius", 10);
-                pub_ground_points = ph.advertise<sensor_msgs::PointCloud2>("/perception/ground_points", 10);
-                pub_no_ground_points = ph.advertise<sensor_msgs::PointCloud2>("/perception/no_ground_points_", 10);
-            }
-            std::string filename;
-            ros::NodeHandle phc("~");
-            phc.getParam("/perception/preprocess_config", filename);
-            // 原配置文件读取方法
-            // std::map<string, string> m;
-            // readconfig_.ReadConfig(filename, m);
-            // ReadProConfig(m, proprecess_config_);
-            // json配置文件获取方法
-            ReadCellConfigJson(filename, proprecess_config_);
-            row = (int)(proprecess_config_.xmax - proprecess_config_.xmin) / proprecess_config_.cell_size_x;
-            col = (int)(proprecess_config_.ymax - proprecess_config_.ymin) / proprecess_config_.cell_size_y;
-            return 0;
+        INFO("LidarPreprocess Init");
+
+        /* -------- 1. 调试发布器 -------- */
+        debug_ = node_->declare_parameter<bool>("debug_pre", false);
+        if (debug_)
+        {
+            pub_lidar_voxel       = node_->create_publisher<sensor_msgs::msg::PointCloud2>("/perception/lidar_voxel",          10);
+            pub_lidar_radius      = node_->create_publisher<sensor_msgs::msg::PointCloud2>("/perception/lidar_radius",         10);
+            pub_ground_points     = node_->create_publisher<sensor_msgs::msg::PointCloud2>("/perception/ground_points",        10);
+            pub_no_ground_points  = node_->create_publisher<sensor_msgs::msg::PointCloud2>("/perception/no_ground_points_",    10);
+        }
+
+        /* -------- 2. 参数读取 -------- */
+        std::string cfg_path =
+            node_->declare_parameter<std::string>("preprocess_config",
+                                                    "config_json/preprocess.json");
+        ReadCellConfigJson(cfg_path, proprecess_config_);
+
+        row = static_cast<int>((proprecess_config_.xmax - proprecess_config_.xmin)
+                                / proprecess_config_.cell_size_x);
+        col = static_cast<int>((proprecess_config_.ymax - proprecess_config_.ymin)
+                                / proprecess_config_.cell_size_y);
+        return 0;
         }
         // int LidarPreprocess::VoxelFilter(const LidarDataInType &lidar_points, pcl::PointCloud<pcl::PointXYZI>::Ptr &data_out,
         //                                  float &voxel_size)
@@ -80,7 +84,7 @@ namespace perception
         //         sensor_msgs::PointCloud2 output; //声明的输出的点云的格式
         //         pcl::toROSMsg(*data_out, output);
         //         output.header.frame_id = "world";
-        //         pub_lidar_voxel.publish(output);
+        //         pub_lidar_voxel->publish(output);
         //     }
         //     return 0;
         // }
@@ -149,7 +153,7 @@ namespace perception
                 sensor_msgs::PointCloud2 output; //声明的输出的点云的格式
                 pcl::toROSMsg(*data_out, output);
                 output.header.frame_id = "world";
-                pub_lidar_voxel.publish(output);
+                pub_lidar_voxel->publish(output);
             }
 
             return 0;
@@ -220,7 +224,7 @@ namespace perception
                 sensor_msgs::PointCloud2 output; //声明的输出的点云的格式
                 pcl::toROSMsg(*data_out, output);
                 output.header.frame_id = "world";
-                pub_lidar_voxel.publish(output);
+                pub_lidar_voxel->publish(output);
             }
 
             return 0;
@@ -280,7 +284,7 @@ namespace perception
                 sensor_msgs::PointCloud2 output; //声明的输出的点云的格式
                 pcl::toROSMsg(*data_out, output);
                 output.header.frame_id = "world";
-                pub_lidar_voxel.publish(output);
+                pub_lidar_voxel->publish(output);
             }
             return 0;
         }
@@ -314,8 +318,8 @@ namespace perception
                 pcl::toROSMsg(*no_ground_points, output_no_groud_points);
                 output_groud_points.header.frame_id = "world";
                 output_no_groud_points.header.frame_id = "world";
-                pub_ground_points.publish(output_groud_points);
-                pub_no_ground_points.publish(output_no_groud_points);
+                pub_ground_points->publish(output_groud_points);
+                pub_no_ground_points->publish(output_no_groud_points);
             }
             return 0;
         }
@@ -482,7 +486,7 @@ namespace perception
                 pcl::toROSMsg(*data_out, output);
                 // pcl_conversions::fromPCL(*data_out, output);
                 output.header.frame_id = "world";
-                pub_lidar_radius.publish(output);
+                pub_lidar_radius->publish(output);
             }
             return 0;
         }
@@ -541,7 +545,7 @@ namespace perception
                 sensor_msgs::PointCloud2 output; //声明的输出的点云的格式
                 pcl::toROSMsg(*data_out, output);
                 output.header.frame_id = "world";
-                pub_lidar_radius.publish(output);
+                pub_lidar_radius->publish(output);
             }
 
             return 0;

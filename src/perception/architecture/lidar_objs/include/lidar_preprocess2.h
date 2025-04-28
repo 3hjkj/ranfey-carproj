@@ -8,6 +8,7 @@
 #include <math.h>
 #include "json/include/json.h"
 #include <iomanip>
+#include <rclcpp/rclcpp.hpp>      
 namespace perception
 {
     namespace lidar_objs
@@ -21,11 +22,12 @@ namespace perception
             //debug
 
             perception::ReadConfigCommon readconfig_;
-            ros::NodeHandle ph;
-            ros::Publisher pub_lidar_radius;
-            ros::Publisher pub_lidar_voxel;
-            ros::Publisher pub_ground_points;
-            ros::Publisher pub_no_ground_points;
+            rclcpp::Node::SharedPtr node_;    //!< 代替 ros::NodeHandle
+            rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr pub_lidar_radius;
+            rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr pub_lidar_voxel;
+            rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr pub_ground_points;
+            rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr pub_no_ground_points;
+
             bool debug_ = false;
             int row;
             int col;
@@ -147,7 +149,7 @@ namespace perception
             }
 
         public:
-            LidarPreprocess2(/* args */);
+            explicit LidarPreprocess2(const rclcpp::Node::SharedPtr& node);
             ~LidarPreprocess2();
             int Init();
             int DeleteNanPoints(const pcl::PointCloud<pcl::PointXYZ>::Ptr &lidar_points,

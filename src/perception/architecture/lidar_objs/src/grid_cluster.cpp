@@ -1,108 +1,105 @@
 #include "architecture/lidar_objs/include/grid_cluster.h"
+#include <pcl_conversions/pcl_conversions.h>          // pcl↔ROS2 消息
+
+/* ───── 统一日志宏，便于与旧版 INFO/WARN/ERROR 调用保持一致 ───── */
+#define INFO(fmt, ...)  RCLCPP_INFO (node_->get_logger(), fmt, ##__VA_ARGS__)
+#define WARN(fmt, ...)  RCLCPP_WARN (node_->get_logger(), fmt, ##__VA_ARGS__)
+#define ERROR(fmt, ...) RCLCPP_ERROR(node_->get_logger(), fmt, ##__VA_ARGS__)
+
 namespace perception
 {
     namespace lidar_objs
     {
-        LidarCluster::LidarCluster(/* args */)
+        LidarCluster::LidarCluster(const rclcpp::Node::SharedPtr& node)
+        : node_(node)
         {
         }
+
 
         LidarCluster::~LidarCluster()
         {
         }
         int LidarCluster::Init()
         {
-            INFO("grid lidar cluster init");
-            lidar_preprocess = std::make_shared<LidarPreprocess2>();
-            lidar_cluster_ = std::make_shared<PointsCluster>();
-            // debug
-            if (debug_)
-            {
-                ph = ros::NodeHandle();
-                pub_lidar_obj_debug = ph.advertise<lidar_msgs::msg::Objects>("/perception/lidar_objs_debug", 10);
-            }
-            std::string filename;
-            ros::NodeHandle phc("~");
-            phc.getParam("obj_config", filename);
-            // 原配置文件读取方法
-            // std::map<string, string> m;
-            // readconfig_.ReadConfig(filename, m);
-            // ReadObjConfig(m, objs_config_);
-            // json配置文件获取方法
-            ReadCellConfigJson(filename, objs_config_);
-            lidar_preprocess->Init();
-            return 0;
-        }
-        int LidarCluster::Process(const LidarDataInType &lidar_points, lidar_msgs::msg::Objects &lidar_objs)
-        {
-            INFO("start grid lidar cluster");
-            pcl::PointCloud<pcl::PointXYZ>::Ptr clouds_filter_r(new pcl::PointCloud<pcl::PointXYZ>);
-            pcl::PointCloud<pcl::PointXYZ>::Ptr clouds_filter_v(new pcl::PointCloud<pcl::PointXYZ>);
-            pcl::PointCloud<pcl::PointXYZ>::Ptr clouds_no_ground(new pcl::PointCloud<pcl::PointXYZ>);
-            pcl::PointCloud<pcl::PointXYZ>::Ptr clouds_ground(new pcl::PointCloud<pcl::PointXYZ>);
-            pcl::PointCloud<pcl::PointXYZ>::Ptr clouds_no_ground_all(new pcl::PointCloud<pcl::PointXYZ>);
-            pcl::PointCloud<pcl::PointXYZ>::Ptr clouds(new pcl::PointCloud<pcl::PointXYZ>);
-            for (auto &pair : lidar_points.point_cloud_ptr_map)
-            {
-                if (!pair.second->empty())
-                {
-                    // 注释部分为使用模板函数进行函数调用,但是实际测试发现,使用模板函数的运行速度下降了大概10-20毫秒,故不使用
-                    // pcl::PointXYZ tmp;
-                    // pcl::PointCloud<pcl::PointXYZ> tmp_;
-                    // clouds = lidar_preprocess->GetNeedPoints2(pair.second, tmp, clouds, tmp_);
-                    // // 1. voxel and radius filter
-                    // lidar_preprocess->VoxelFilterTest(clouds, clouds_filter_v, clouds->points[0]);
-                    // lidar_preprocess->RadiusFilterTest(clouds_filter_v, clouds_filter_r, clouds->points[0]);
-                    // // 2.ground points and no_ground points
-                    // lidar_preprocess->GroundPointsTest(clouds_filter_r, clouds_ground, clouds_no_ground,
-                    //                                    clouds->points[0]);
-                    // LOG(INFO) << " objs_config_.voxel_size: " << objs_config_.voxel_size;
-                    lidar_preprocess->VoxelFilter(pair.second, clouds_filter_v, objs_config_.voxel_size);
-                    lidar_preprocess->RadiusFilter(clouds_filter_v, clouds_filter_r, objs_config_.radius_search,
-                                                   objs_config_.search_num);
-                    lidar_preprocess->GroundPoints(clouds_filter_r, clouds_ground, clouds_no_ground,
-                                                   objs_config_.threshold_h, objs_config_.points_num);
-                    for (auto &p : clouds_no_ground->points)
-                    {
-                        if (std::isnan(p.x) || std::isnan(p.y) || std::isnan(p.z))
-                        {
-                            continue; //Jump those points.
-                        }
-                        clouds_no_ground_all->points.emplace_back(p);
-                    }
-                }
-            }
+        INFO("grid lidar cluster init");
 
-            // 3. cluster
-            // std::vector<pcl::PointIndices> cluster_indices;
-            // if (objs_config_.method == 1)
-            // {
-            //     cluster_indices = ClusterIndicesRG(clouds_no_ground_all, cluster_indices);
-            // }
-            // else if (objs_config_.method == 2)
-            // {
-            //     cluster_indices = ClusterIndicesEE(clouds_no_ground_all, cluster_indices);
-            // }
-            // // 4. objs list
-            // Objslist(clouds_no_ground_all, cluster_indices, lidar_objs);
-            if (clouds_no_ground_all->points.empty())
-            {
-                ERROR("no noground points");
-                return 1;
-            }
-            // 再次进行体素栅格滤波,是因为点云太多,计算速度太慢
-            clouds_filter_v->points.clear();
-            float v_size = 0.3;
-            lidar_preprocess->VoxelFilter(clouds_no_ground_all, clouds_filter_v, v_size);
-            lidar_preprocess->RadiusFilter(clouds_filter_v, clouds, objs_config_.radius_search,
-                                           objs_config_.search_num);
-            // LOG(WARNING) << "clouds->points.size:" << clouds->points.size();
-            lidar_objs = lidar_cluster_->Pub(clouds);
-            if (debug_)
-            {
-                pub_lidar_obj_debug.publish(lidar_objs);
-            }
-            return 0;
+        lidar_preprocess = std::make_shared<LidarPreprocess2>();
+        lidar_cluster_   = std::make_shared<PointsCluster>();
+
+        /* ---------- 1. 调试开关与调试话题 ---------- */
+        debug_ = node_->declare_parameter<bool>("debug_objs", true);
+        if (debug_)
+            pub_lidar_obj_debug =
+                node_->create_publisher<lidar_msgs::msg::Objects>(
+                    "/perception/lidar_objs_debug", 10);
+
+        /* ---------- 2. obj_config 路径 ---------- */
+        std::string filename =
+            node_->declare_parameter<std::string>("obj_config",
+                "config_json/objs.json");
+
+        /* ---------- 3. 读取 JSON 配置 ---------- */
+        if (!ReadCellConfigJson(filename, objs_config_))
+        {
+            ERROR("read obj config json failed: %s", filename.c_str());
+            return -1;
+        }
+
+        /* ---------- 4. 子模块初始化 ---------- */
+        lidar_preprocess->Init();
+        return 0;
+        }
+        /* =============================================================
+        *  Process：点云预处理 + 聚类 + 发布
+        * ===========================================================*/
+        int LidarCluster::Process(const LidarDataInType& lidar_points,
+                                lidar_msgs::msg::Objects& lidar_objs)
+        {
+        INFO("start grid lidar cluster");
+
+        pcl::PointCloud<pcl::PointXYZ>::Ptr clouds_filter_r(new pcl::PointCloud<pcl::PointXYZ>);
+        pcl::PointCloud<pcl::PointXYZ>::Ptr clouds_filter_v(new pcl::PointCloud<pcl::PointXYZ>);
+        pcl::PointCloud<pcl::PointXYZ>::Ptr clouds_no_ground(new pcl::PointCloud<pcl::PointXYZ>);
+        pcl::PointCloud<pcl::PointXYZ>::Ptr clouds_ground(new pcl::PointCloud<pcl::PointXYZ>);
+        pcl::PointCloud<pcl::PointXYZ>::Ptr clouds_no_ground_all(new pcl::PointCloud<pcl::PointXYZ>);
+        pcl::PointCloud<pcl::PointXYZ>::Ptr clouds(new pcl::PointCloud<pcl::PointXYZ>);
+
+        /* ---------- A. 逐雷达预处理 ---------- */
+        for (auto& pair : lidar_points.point_cloud_ptr_map)
+        {
+            if (pair.second->empty()) continue;
+
+            lidar_preprocess->VoxelFilter (pair.second,  clouds_filter_v, objs_config_.voxel_size);
+            lidar_preprocess->RadiusFilter(clouds_filter_v, clouds_filter_r,
+                                        objs_config_.radius_search, objs_config_.search_num);
+            lidar_preprocess->GroundPoints(clouds_filter_r, clouds_ground, clouds_no_ground,
+                                        objs_config_.threshold_h, objs_config_.points_num);
+
+            for (auto& p : clouds_no_ground->points)
+            if (!std::isnan(p.x) && !std::isnan(p.y) && !std::isnan(p.z))
+                clouds_no_ground_all->points.emplace_back(p);
+        }
+
+        /* ---------- B. 如果没有地面外点则返回 ---------- */
+        if (clouds_no_ground_all->points.empty())
+        {
+            ERROR("no noground points");
+            return 1;
+        }
+
+        /* ---------- C. 二次体素、半径滤波，加速聚类 ---------- */
+        clouds_filter_v->points.clear();
+        lidar_preprocess->VoxelFilter(clouds_no_ground_all, clouds_filter_v, 0.3f);
+        lidar_preprocess->RadiusFilter(clouds_filter_v, clouds,
+                                        objs_config_.radius_search, objs_config_.search_num);
+
+        /* ---------- D. 调用聚类模块并发布 ---------- */
+        lidar_objs = lidar_cluster_->Pub(clouds);
+
+        if (debug_)
+            pub_lidar_obj_debug->publish(lidar_objs);
+
+        return 0;
         }
         std::vector<pcl::PointIndices> LidarCluster::ClusterIndicesEE(const pcl::PointCloud<pcl::PointXYZ>::Ptr &data_in, std::vector<pcl::PointIndices> cluster_indices)
         {
@@ -170,45 +167,43 @@ namespace perception
             return cluster_indices;
         }
         template <typename T>
-        int LidarCluster::Objslist(const T &data_in, std::vector<pcl::PointIndices> cluster_indices, lidar_msgs::msg::Objects &objs_list)
+        int LidarCluster::Objslist(const T& data_in,
+                                std::vector<pcl::PointIndices> cluster_indices,
+                                lidar_msgs::msg::Objects& objs_list)
         {
-            int idx = 0;
-            if (cluster_indices.empty())
+        int idx = 0;
+        if (cluster_indices.empty()) return 0;
+
+        for (auto& obj : cluster_indices)
+        {
+            obj_struct obj_tmp; obj_tmp.reset();
+
+            for (int id : obj.indices)
             {
-                // LOG(WARNING) << " cluster_indices size is 0";
-                return 0;
+            obj_tmp.zmax = std::max(obj_tmp.zmax, data_in->points[id].z);
+            obj_tmp.zmin = std::min(obj_tmp.zmin, data_in->points[id].z);
+            obj_tmp.xmax = std::max(obj_tmp.xmax, data_in->points[id].x);
+            obj_tmp.xmin = std::min(obj_tmp.xmin, data_in->points[id].x);
+            obj_tmp.ymax = std::max(obj_tmp.ymax, data_in->points[id].y);
+            obj_tmp.ymin = std::min(obj_tmp.ymin, data_in->points[id].y);
             }
-            for (auto obj : cluster_indices)
-            {
-                obj_struct obj_tmp;
-                obj_tmp.reset();
-                for (int i = 0; i < obj.indices.size(); i++)
-                {
-                    obj_tmp.zmax = data_in->points[obj.indices[i]].z > obj_tmp.zmax ? data_in->points[obj.indices[i]].z : obj_tmp.zmax;
-                    obj_tmp.zmin = data_in->points[obj.indices[i]].z < obj_tmp.zmin ? data_in->points[obj.indices[i]].z : obj_tmp.zmin;
-                    obj_tmp.xmax = data_in->points[obj.indices[i]].x > obj_tmp.xmax ? data_in->points[obj.indices[i]].x : obj_tmp.xmax;
-                    obj_tmp.xmin = data_in->points[obj.indices[i]].x < obj_tmp.xmin ? data_in->points[obj.indices[i]].x : obj_tmp.xmin;
-                    obj_tmp.ymax = data_in->points[obj.indices[i]].y > obj_tmp.ymax ? data_in->points[obj.indices[i]].y : obj_tmp.ymax;
-                    obj_tmp.ymin = data_in->points[obj.indices[i]].y < obj_tmp.ymin ? data_in->points[obj.indices[i]].y : obj_tmp.ymin;
-                }
-                lidar_msgs::msg::Object obj_;
-                if ((obj_tmp.zmax + obj_tmp.zmin) / 2 < objs_config_.obj_min_z)
-                {
-                    continue;
-                }
-                obj_.idx = idx;
-                obj_.rel_x = (obj_tmp.xmax + obj_tmp.xmin) / 2;
-                obj_.rel_y = (obj_tmp.ymax + obj_tmp.ymin) / 2;
-                obj_.rel_z = (obj_tmp.zmax + obj_tmp.zmin) / 2;
-                obj_.length = (obj_tmp.xmax - obj_tmp.xmin);
-                obj_.width = (obj_tmp.ymax - obj_tmp.ymin);
-                obj_.height = (obj_tmp.zmax - obj_tmp.zmin);
-                obj_.rel_heading = std::atan2(obj_.rel_y, obj_.rel_x) * 180 / pi;
-                obj_.time = ros::Time::now().toSec();
-                objs_list.objs.push_back(obj_);
-                ++idx;
-            }
-            return 0;
+
+            if ((obj_tmp.zmax + obj_tmp.zmin) / 2 < objs_config_.obj_min_z) continue;
+
+            lidar_msgs::msg::Object o;
+            o.idx   = idx++;
+            o.rel_x = (obj_tmp.xmax + obj_tmp.xmin) / 2;
+            o.rel_y = (obj_tmp.ymax + obj_tmp.ymin) / 2;
+            o.rel_z = (obj_tmp.zmax + obj_tmp.zmin) / 2;
+            o.length = (obj_tmp.xmax - obj_tmp.xmin);
+            o.width  = (obj_tmp.ymax - obj_tmp.ymin);
+            o.height = (obj_tmp.zmax - obj_tmp.zmin);
+            o.rel_heading = std::atan2(o.rel_y, o.rel_x) * 180 / pi;
+            o.time = node_->get_clock()->now().seconds();     // ← 时间戳
+
+            objs_list.objs.push_back(o);
+        }
+        return 0;
         }
         bool LidarCluster::ReadObjConfig(const std::map<string, string> &m, objs_config &conf)
         {

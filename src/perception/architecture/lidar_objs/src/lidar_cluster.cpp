@@ -1,123 +1,96 @@
 #include "../include/lidar_cluster.h"
+#include <pcl_conversions/pcl_conversions.h>
+
+/* —— 用 RCLCPP 封装旧版日志宏 —— */
+#define INFO(fmt, ...)  RCLCPP_INFO (node_->get_logger(), fmt, ##__VA_ARGS__)
+#define WARN(fmt, ...)  RCLCPP_WARN (node_->get_logger(), fmt, ##__VA_ARGS__)
+#define ERROR(fmt, ...) RCLCPP_ERROR(node_->get_logger(), fmt, ##__VA_ARGS__)
+
 namespace perception
 {
-    PointsCluster::PointsCluster()
-    {
 
-        dbscan_ = std::make_shared<DBSCAN>(0.6, 3);
-        min_rotate_rect_ = std::make_shared<min_rotate_rect>();
-    }
-    PointsCluster::~PointsCluster()
-    {
-    }
+/* ───────── 构造 / 析构 ───────── */
+PointsCluster::PointsCluster(const rclcpp::Node::SharedPtr& node)
+: node_(node)
+{
+  /* 若需要发布调试点云，可取消以下两行注释
+  pub_no_ground_points_ =
+      node_->create_publisher<sensor_msgs::msg::PointCloud2>(
+          topic_name1, 10);
+  */
 
-    lidar_msgs::msg::Objects PointsCluster::Pub(const pcl::PointCloud<pcl::PointXYZ>::Ptr &data_in)
-    {
-        std::vector<points> data;
-        data = CloudToPoints(data_in);
-        // LOG(INFO) << data.size();
-        std::vector<std::vector<points>> indices = dbscan_->Clustering(data);
-        lidar_msgs::msg::Objects objs;
-        int idx = 0;
-        if (0)
-        {
-            fstream outline1;
-
-            outline1.open("/home/wj/code/perception/tool/test_julei/" + std::to_string(0) + ".txt", ios::ate | ios::out);
-            for (auto p : data)
-            {
-                outline1 << std::setprecision(10) << p.x << "," << p.y << "," << p.z << "\n";
-            }
-        }
-        if (indices.empty())
-        {
-            return objs;
-        }
-        // 3.取聚类id并进行画框
-        // LOG(INFO) << "indices size :" << indices.size() << "\n";
-        for (auto p : indices)
-        {
-            // LOG(INFO) << "p.size():" << p.size();
-            lidar_msgs::msg::Object obj;
-            std::vector<double> four_points;
-            if (p.size() < 4)
-                continue;
-            // x y length width height rad
-            four_points = min_rotate_rect_->MinRotateRect(p);
-            // 输出
-
-            if (four_points[4] < 0.2) // z
-                continue;
-            if (four_points.empty())
-            {
-                // LOG(ERROR) << "four_points is empty";
-                four_points.clear();
-            }
-            else
-            {
-                if (0)
-                {
-                    // LOG(INFO) << "x:" << four_points[0] << ","
-                    //           << "y:" << four_points[1] << ","
-                    //           << "length:" << four_points[2] << ","
-                    //           << "width:" << four_points[3] << ","
-                    //           << "height:" << four_points[4] << ","
-                    //           << "heading:" << four_points[5] * arc2degree << ",";
-                }
-                obj.rel_x = four_points[0];
-                obj.rel_y = four_points[1];
-                obj.rel_z = four_points[4];
-                obj.length = four_points[2];
-                obj.width = four_points[3];
-                obj.height = four_points[4];
-                obj.rel_heading = four_points[5] * arc2degree;
-                // obj.rel_heading = 0;
-                obj.idx = idx;
-                idx++;
-                if (obj.length < 0.4 && obj.width < 0.4 && obj.height > 0.8)
-                {
-                    obj.type = 3;
-                }
-                else if (((obj.length < 3 && obj.length > 0.4 && obj.width < 0.4) ||
-                          (obj.length < 0.4 && obj.width > 0.4 && obj.width < 3)) &&
-                         obj.height > 0.8)
-                {
-                    obj.type = 4;
-                }
-                else if (obj.length > 0.4 && obj.width > 0.4 && obj.height > 0.8)
-                {
-                    obj.type = 2;
-                }
-                else
-                {
-                    obj.type = 0;
-                }
-                objs.objs.emplace_back(obj);
-                four_points.clear();
-            }
-        }
-        indices.clear();
-
-        // LOG(INFO) << "objs:size:" << objs.objs.size();
-        INFO("cluster_objs:size:{}", objs.objs.size());
-        return objs;
-    }
-    std::vector<points> PointsCluster::CloudToPoints(const pcl::PointCloud<pcl::PointXYZ>::Ptr &msg)
-    {
-        std::vector<points> data_out;
-        if (msg->points.empty())
-        {
-            // LOG(ERROR) << "data in is empty!!!";
-            return data_out;
-        }
-        for (auto &p : msg->points)
-        {
-            points pp;
-            pp.x = p.x;
-            pp.y = p.y;
-            pp.z = p.z;
-            data_out.emplace_back(pp);
-        }
-        return data_out;
-    }
+  dbscan_          = std::make_shared<DBSCAN>(0.6, 3);
+  min_rotate_rect_ = std::make_shared<min_rotate_rect>();
+  point_tmp.reset(new pcl::PointCloud<pcl::PointXYZ>);
 }
+
+/* 默认析构函数即可 */
+PointsCluster::~PointsCluster() = default;
+
+/* ───────── 对外接口：聚类并返回 Objects ───────── */
+lidar_msgs::msg::Objects
+PointsCluster::Pub(const pcl::PointCloud<pcl::PointXYZ>::Ptr& data_in)
+{
+  /* 1. PCL → std::vector<points>（与旧版相同） */
+  std::vector<points> data = CloudToPoints(data_in);
+
+  /* 2. DBSCAN 聚类 */
+  std::vector<std::vector<points>> indices = dbscan_->Clustering(data);
+
+  lidar_msgs::msg::Objects objs;
+  if (indices.empty()) return objs;
+
+  /* 3. 每个聚类画最小外接矩形并生成 Object */
+  int idx = 0;
+  for (const auto& cluster : indices)
+  {
+    if (cluster.size() < 4) continue;
+
+    std::vector<double> rect = min_rotate_rect_->MinRotateRect(cluster);
+    /* 过滤过低目标 */
+    if (rect.empty() || rect[4] < 0.2) continue;
+
+    lidar_msgs::msg::Object obj;
+    obj.rel_x  = rect[0];
+    obj.rel_y  = rect[1];
+    obj.rel_z  = rect[4];
+    obj.length = rect[2];
+    obj.width  = rect[3];
+    obj.height = rect[4];
+    obj.rel_heading = rect[5] * arc2degree;
+    obj.idx = idx++;
+
+    /* 简单类型判定，与旧版一致 */
+    if (obj.length < 0.4 && obj.width < 0.4 && obj.height > 0.8)
+      obj.type = 3;
+    else if (((obj.length < 3 && obj.length > 0.4 && obj.width < 0.4) ||
+              (obj.length < 0.4 && obj.width > 0.4 && obj.width < 3)) &&
+             obj.height > 0.8)
+      obj.type = 4;
+    else if (obj.length > 0.4 && obj.width > 0.4 && obj.height > 0.8)
+      obj.type = 2;
+    else
+      obj.type = 0;
+
+    objs.objs.emplace_back(obj);
+  }
+
+  INFO("cluster_objs: size={}", objs.objs.size());
+  return objs;
+}
+
+/* ───────── PCL 点云 → 自定义 points 数组 ───────── */
+std::vector<points>
+PointsCluster::CloudToPoints(const pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud)
+{
+  std::vector<points> data_out;
+  if (cloud->points.empty()) return data_out;
+
+  data_out.reserve(cloud->points.size());
+  for (const auto& p : cloud->points)
+    data_out.push_back({p.x, p.y, p.z});
+
+  return data_out;
+}
+
+} // namespace perception
