@@ -135,6 +135,13 @@ ament_target_dependencies(perception
 install(TARGETS perception
   RUNTIME DESTINATION lib/${PROJECT_NAME})
 
+  install(DIRECTORY communication/include/
+  DESTINATION include/
+)
+
+install(DIRECTORY launch
+  DESTINATION share/${PROJECT_NAME}) 
+
 # 如果还想装头文件可按需开启
 # install(DIRECTORY common/include/ DESTINATION include)
 

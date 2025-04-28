@@ -45,6 +45,6 @@
 
   <!-- 其他工具可在 export 区域声明额外信息 -->
   <export>
-    <!-- 例如：插件描述、build-type、cfgi files 等 -->
+    <build_type>ament_cmake</build_type>
   </export>
 </package>
