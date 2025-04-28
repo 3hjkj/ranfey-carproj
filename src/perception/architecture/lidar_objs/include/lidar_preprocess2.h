@@ -45,7 +45,7 @@ namespace perception
                 }
                 if (data_in->empty())
                 {
-                    ROS_ERROR_STREAM("no lidar data grond");
+                    RCLCPP_DEBUG_STREAM(node_->get_logger(), "no lidar data grond");
                     return 1;
                 }
                 for (auto &p : data_in->points)
@@ -75,7 +75,7 @@ namespace perception
                     }
                     catch (std::exception &e)
                     {
-                        ROS_DEBUG_STREAM(e.what());
+                        RCLCPP_DEBUG_STREAM(node_->get_logger(), "grid_preprocess out of range");
                     }
                 }
                 return 0;
@@ -205,11 +205,11 @@ namespace perception
                 sor.filter(*data_out);
                 if (debug_)
                 {
-                    sensor_msgs::PointCloud2 output; //声明的输出的点云的格式
+                    sensor_msgs::msg::PointCloud2 output; //声明的输出的点云的格式
                     pcl::toROSMsg(*data_out, output);
                     // pcl_conversions::fromPCL(*data_out, output);
                     output.header.frame_id = "world";
-                    pub_lidar_voxel.publish(output);
+                    pub_lidar_voxel->publish(output);
                 }
                 return 0;
             }
@@ -224,11 +224,11 @@ namespace perception
                 outrem.filter(*data_out);
                 if (debug_)
                 {
-                    sensor_msgs::PointCloud2 output; //声明的输出的点云的格式
+                    sensor_msgs::msg::PointCloud2 output; //声明的输出的点云的格式
                     pcl::toROSMsg(*data_out, output);
                     // pcl_conversions::fromPCL(*data_out, output);
                     output.header.frame_id = "world";
-                    pub_lidar_radius.publish(output);
+                    pub_lidar_radius->publish(output);
                 }
                 return 0;
             }
@@ -250,8 +250,8 @@ namespace perception
                 GetGroundPointsTest(data_in, grid_preprocess, ground_poins, no_ground_points, type);
                 if (debug_)
                 {
-                    sensor_msgs::PointCloud2 output_groud_points;    //声明的输出的点云的格式
-                    sensor_msgs::PointCloud2 output_no_groud_points; //声明的输出的点云的格式
+                    sensor_msgs::msg::PointCloud2 output_groud_points;    //声明的输出的点云的格式
+                    sensor_msgs::msg::PointCloud2 output_no_groud_points; //声明的输出的点云的格式
                     pcl::toROSMsg(*ground_poins, output_groud_points);
                     pcl::toROSMsg(*no_ground_points, output_no_groud_points);
                     // pcl_conversions::fromPCL(*data_out, output);
@@ -259,8 +259,8 @@ namespace perception
                     output_groud_points.header.frame_id = "world";
                     // output_no_groud_points.header.frame_id = "/rslidar";
                     output_no_groud_points.header.frame_id = "world";
-                    pub_ground_points.publish(output_groud_points);
-                    pub_no_ground_points.publish(output_no_groud_points);
+                    pub_ground_points->publish(output_groud_points);
+                    pub_no_ground_points->publish(output_no_groud_points);
                 }
                 return 0;
             }

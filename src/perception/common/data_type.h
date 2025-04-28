@@ -11,12 +11,12 @@
 #include <unordered_map>
 #include <vector>
 #include <vector>
-#include <sensor_msgs/PointCloud2.h>
+#include <sensor_msgs/msg/point_cloud2.hpp>
 #include "lidar_msgs/msg/cell.hpp"
 #include "lidar_msgs/msg/cells.hpp"
 #include <pcl_conversions/pcl_conversions.h>
 #include <pcl/conversions.h>
-#include <pcl_ros/transforms.h>
+#include <pcl_ros/transforms.hpp>
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
 #include "lidar_points_type.h"

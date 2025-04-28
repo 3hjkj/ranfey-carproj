@@ -1,8 +1,6 @@
 #include "architecture/lidar_cells/include/lidar_cell.h"
 #include <pcl_conversions/pcl_conversions.h>
-#define INFO(fmt, ...)  RCLCPP_INFO (node_->get_logger(), fmt, ##__VA_ARGS__)
-#define WARN(fmt, ...)  RCLCPP_WARN (node_->get_logger(), fmt, ##__VA_ARGS__)
-#define ERROR(fmt, ...) RCLCPP_ERROR(node_->get_logger(), fmt, ##__VA_ARGS__)
+
 namespace perception
 {
     namespace lidar_cells
@@ -12,7 +10,7 @@ namespace perception
         LidarCell::LidarCell(const rclcpp::Node::SharedPtr& node)
         : node_(node)
         {
-        lidar_preprocess_ = std::make_shared<lidar_objs::LidarPreprocess>();
+        lidar_preprocess_ = std::make_shared<lidar_objs::LidarPreprocess>(node_);
         }
 
         /* ───────── Init：参数读取、发布器创建、表格初始化 ───────── */
@@ -103,7 +101,7 @@ namespace perception
                         }
                         catch (std::exception &e)
                         {
-                            ROS_DEBUG_STREAM(e.what());
+                            RCLCPP_DEBUG_STREAM(node_->get_logger(), e.what());
                         }
                     }
                 }
@@ -189,7 +187,7 @@ namespace perception
                     }
                     if (1)
                     {
-                        sensor_msgs::PointCloud2 output_no_groud_points; //声明的输出的点云的格式
+                        sensor_msgs::msg::PointCloud2 output_no_groud_points; //声明的输出的点云的格式
                         pcl::toROSMsg(*clouds_no_ground_all, output_no_groud_points);
                         output_no_groud_points.header.frame_id = "world";
                         pub_no_ground_points->publish(output_no_groud_points);

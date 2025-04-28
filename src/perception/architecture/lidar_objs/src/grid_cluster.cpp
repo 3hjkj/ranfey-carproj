@@ -1,10 +1,7 @@
 #include "architecture/lidar_objs/include/grid_cluster.h"
 #include <pcl_conversions/pcl_conversions.h>          // pcl↔ROS2 消息
 
-/* ───── 统一日志宏，便于与旧版 INFO/WARN/ERROR 调用保持一致 ───── */
-#define INFO(fmt, ...)  RCLCPP_INFO (node_->get_logger(), fmt, ##__VA_ARGS__)
-#define WARN(fmt, ...)  RCLCPP_WARN (node_->get_logger(), fmt, ##__VA_ARGS__)
-#define ERROR(fmt, ...) RCLCPP_ERROR(node_->get_logger(), fmt, ##__VA_ARGS__)
+
 
 namespace perception
 {
@@ -16,9 +13,7 @@ namespace perception
         }
 
 
-        LidarCluster::~LidarCluster()
-        {
-        }
+
         int LidarCluster::Init()
         {
         INFO("grid lidar cluster init");
@@ -29,7 +24,7 @@ namespace perception
         /* ---------- 1. 调试开关与调试话题 ---------- */
         debug_ = node_->declare_parameter<bool>("debug_objs", true);
         if (debug_)
-            pub_lidar_obj_debug =
+        pub_objs_ =
                 node_->create_publisher<lidar_msgs::msg::Objects>(
                     "/perception/lidar_objs_debug", 10);
 
@@ -89,7 +84,8 @@ namespace perception
 
         /* ---------- C. 二次体素、半径滤波，加速聚类 ---------- */
         clouds_filter_v->points.clear();
-        lidar_preprocess->VoxelFilter(clouds_no_ground_all, clouds_filter_v, 0.3f);
+        float voxel_size = 0.3f;
+        lidar_preprocess->VoxelFilter(clouds_no_ground_all, clouds_filter_v, voxel_size);
         lidar_preprocess->RadiusFilter(clouds_filter_v, clouds,
                                         objs_config_.radius_search, objs_config_.search_num);
 
@@ -97,7 +93,7 @@ namespace perception
         lidar_objs = lidar_cluster_->Pub(clouds);
 
         if (debug_)
-            pub_lidar_obj_debug->publish(lidar_objs);
+        pub_objs_->publish(lidar_objs);
 
         return 0;
         }

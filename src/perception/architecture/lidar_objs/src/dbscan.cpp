@@ -1,9 +1,6 @@
 #include "../include/dbscan.h"
 namespace perception
 {
-    DbscanType::DbscanType(/* args */) {}
-
-    DbscanType::~DbscanType() {}
     DBSCAN::DBSCAN(double eps, int min_points_num) : eps_(eps), min_points_num_(min_points_num), cluster_idx_(DB_NOT_CLASSIFIED) {}
 
     DBSCAN::~DBSCAN() {}

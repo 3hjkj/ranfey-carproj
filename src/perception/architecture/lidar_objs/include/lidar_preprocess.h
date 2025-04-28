@@ -204,7 +204,7 @@ namespace perception
                 sor.filter(*data_out);
                 if (debug_)
                 {
-                    sensor_msgs::PointCloud2 output; //声明的输出的点云的格式
+                    sensor_msgs::msg::PointCloud2 output; //声明的输出的点云的格式
                     pcl::toROSMsg(*data_out, output);
                     // pcl_conversions::fromPCL(*data_out, output);
                     output.header.frame_id = "world";
@@ -223,7 +223,7 @@ namespace perception
                 outrem.filter(*data_out);
                 if (debug_)
                 {
-                    sensor_msgs::PointCloud2 output; //声明的输出的点云的格式
+                    sensor_msgs::msg::PointCloud2 output; //声明的输出的点云的格式
                     pcl::toROSMsg(*data_out, output);
                     // pcl_conversions::fromPCL(*data_out, output);
                     output.header.frame_id = "world";
@@ -249,8 +249,8 @@ namespace perception
                 GetGroundPointsTest(data_in, grid_preprocess, ground_poins, no_ground_points, type);
                 if (debug_)
                 {
-                    sensor_msgs::PointCloud2 output_groud_points;    //声明的输出的点云的格式
-                    sensor_msgs::PointCloud2 output_no_groud_points; //声明的输出的点云的格式
+                    sensor_msgs::msg::PointCloud2 output_groud_points;    //声明的输出的点云的格式
+                    sensor_msgs::msg::PointCloud2 output_no_groud_points; //声明的输出的点云的格式
                     pcl::toROSMsg(*ground_poins, output_groud_points);
                     pcl::toROSMsg(*no_ground_points, output_no_groud_points);
                     // pcl_conversions::fromPCL(*data_out, output);

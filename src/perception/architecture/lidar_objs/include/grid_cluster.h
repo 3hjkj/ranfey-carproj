@@ -32,7 +32,8 @@ private:
 
   /* 调试发布器：ROS 2 写法改为智能指针 */
   rclcpp::Node::SharedPtr node_;
-  rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr pub_lidar_obj_debug;
+  rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr pub_cloud_;
+  rclcpp::Publisher<lidar_msgs::msg::Objects>::SharedPtr      pub_objs_;
 
   bool debug_ = true;
 

@@ -1,8 +1,5 @@
-#include "communication/include/perception_thread.hpp"
+#include "communication/include/perception_thread.h"
 
-#define INFO(fmt, ...)  RCLCPP_INFO (node_->get_logger(), fmt, ##__VA_ARGS__)
-#define WARN(fmt, ...)  RCLCPP_WARN (node_->get_logger(), fmt, ##__VA_ARGS__)
-#define ERROR(fmt, ...) RCLCPP_ERROR(node_->get_logger(), fmt, ##__VA_ARGS__)
 
 namespace perception
 {
@@ -31,8 +28,8 @@ PerceptionThread::PerceptionThread(const rclcpp::Node::SharedPtr& node)
 
   /* 4. 创建各功能模块 */
   ros_bridge_    = std::make_shared<RosBridge>(node_);
-  lidar_cell_    = std::make_shared<lidar_cells::LidarCell>();
-  lidar_cluster_ = std::make_shared<lidar_objs::LidarCluster>();
+  lidar_cell_    = std::make_shared<lidar_cells::LidarCell>(node_);
+  lidar_cluster_ = std::make_shared<lidar_objs::LidarCluster>(node_);
   executor_      = std::make_shared<threadpool>(THREAD_NUM);
 }
 

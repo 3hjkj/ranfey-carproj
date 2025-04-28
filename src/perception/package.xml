@@ -22,6 +22,8 @@
   <depend>std_msgs</depend>
   <depend>sensor_msgs</depend>
   <depend>geometry_msgs</depend>
+  <depend>localization_msgs</depend>
+  <depend>can_control_msgs</depend>
 
   <!-- PCL 与其 ROS 接口 -->
   <depend>pcl_conversions</depend>

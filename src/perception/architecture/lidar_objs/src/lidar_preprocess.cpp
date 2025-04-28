@@ -1,9 +1,6 @@
 #include "architecture/lidar_objs/include/lidar_preprocess.h"
 #include <pcl_conversions/pcl_conversions.h>       // 调试发布用
-/* ---------- 统一日志宏，保持原 INFO/WARN/ERROR 调用 ---------- */
-#define INFO(fmt, ...)  RCLCPP_INFO (node_->get_logger(), fmt, ##__VA_ARGS__)
-#define WARN(fmt, ...)  RCLCPP_WARN (node_->get_logger(), fmt, ##__VA_ARGS__)
-#define ERROR(fmt, ...) RCLCPP_ERROR(node_->get_logger(), fmt, ##__VA_ARGS__)
+
 namespace perception
 {
     namespace lidar_objs
@@ -12,7 +9,7 @@ namespace perception
         : node_(node)                                                    // 保存节点
         {}
 
-        LidarPreprocess::~LidarPreprocess() = default;
+        LidarPreprocess::~LidarPreprocess()= default;
         int LidarPreprocess::Init()
         {
         INFO("LidarPreprocess Init");
@@ -81,7 +78,7 @@ namespace perception
         //     // LOG(INFO) << "filtered points:" << data_out->points.size();
         //     if (debug_)
         //     {
-        //         sensor_msgs::PointCloud2 output; //声明的输出的点云的格式
+        //         sensor_msgs::msg::PointCloud2 output; //声明的输出的点云的格式
         //         pcl::toROSMsg(*data_out, output);
         //         output.header.frame_id = "world";
         //         pub_lidar_voxel->publish(output);
@@ -150,7 +147,7 @@ namespace perception
             // debug
             if (debug_)
             {
-                sensor_msgs::PointCloud2 output; //声明的输出的点云的格式
+                sensor_msgs::msg::PointCloud2 output; //声明的输出的点云的格式
                 pcl::toROSMsg(*data_out, output);
                 output.header.frame_id = "world";
                 pub_lidar_voxel->publish(output);
@@ -221,7 +218,7 @@ namespace perception
             // debug
             if (debug_)
             {
-                sensor_msgs::PointCloud2 output; //声明的输出的点云的格式
+                sensor_msgs::msg::PointCloud2 output; //声明的输出的点云的格式
                 pcl::toROSMsg(*data_out, output);
                 output.header.frame_id = "world";
                 pub_lidar_voxel->publish(output);
@@ -281,7 +278,7 @@ namespace perception
             // debug
             if (debug_)
             {
-                sensor_msgs::PointCloud2 output; //声明的输出的点云的格式
+                sensor_msgs::msg::PointCloud2 output; //声明的输出的点云的格式
                 pcl::toROSMsg(*data_out, output);
                 output.header.frame_id = "world";
                 pub_lidar_voxel->publish(output);
@@ -312,8 +309,8 @@ namespace perception
             // LOG(INFO) << "no_ground_points size :" << no_ground_points->points.size();
             if (debug_)
             {
-                sensor_msgs::PointCloud2 output_groud_points;    //声明的输出的点云的格式
-                sensor_msgs::PointCloud2 output_no_groud_points; //声明的输出的点云的格式
+                sensor_msgs::msg::PointCloud2 output_groud_points;    //声明的输出的点云的格式
+                sensor_msgs::msg::PointCloud2 output_no_groud_points; //声明的输出的点云的格式
                 pcl::toROSMsg(*ground_poins, output_groud_points);
                 pcl::toROSMsg(*no_ground_points, output_no_groud_points);
                 output_groud_points.header.frame_id = "world";
@@ -482,7 +479,7 @@ namespace perception
             // debug
             if (debug_)
             {
-                sensor_msgs::PointCloud2 output; //声明的输出的点云的格式
+                sensor_msgs::msg::PointCloud2 output; //声明的输出的点云的格式
                 pcl::toROSMsg(*data_out, output);
                 // pcl_conversions::fromPCL(*data_out, output);
                 output.header.frame_id = "world";
@@ -542,7 +539,7 @@ namespace perception
             // debug
             if (debug_)
             {
-                sensor_msgs::PointCloud2 output; //声明的输出的点云的格式
+                sensor_msgs::msg::PointCloud2 output; //声明的输出的点云的格式
                 pcl::toROSMsg(*data_out, output);
                 output.header.frame_id = "world";
                 pub_lidar_radius->publish(output);

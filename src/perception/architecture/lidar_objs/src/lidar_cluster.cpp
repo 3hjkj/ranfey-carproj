@@ -1,10 +1,7 @@
 #include "../include/lidar_cluster.h"
 #include <pcl_conversions/pcl_conversions.h>
 
-/* —— 用 RCLCPP 封装旧版日志宏 —— */
-#define INFO(fmt, ...)  RCLCPP_INFO (node_->get_logger(), fmt, ##__VA_ARGS__)
-#define WARN(fmt, ...)  RCLCPP_WARN (node_->get_logger(), fmt, ##__VA_ARGS__)
-#define ERROR(fmt, ...) RCLCPP_ERROR(node_->get_logger(), fmt, ##__VA_ARGS__)
+
 
 namespace perception
 {
@@ -24,8 +21,6 @@ PointsCluster::PointsCluster(const rclcpp::Node::SharedPtr& node)
   point_tmp.reset(new pcl::PointCloud<pcl::PointXYZ>);
 }
 
-/* 默认析构函数即可 */
-PointsCluster::~PointsCluster() = default;
 
 /* ───────── 对外接口：聚类并返回 Objects ───────── */
 lidar_msgs::msg::Objects

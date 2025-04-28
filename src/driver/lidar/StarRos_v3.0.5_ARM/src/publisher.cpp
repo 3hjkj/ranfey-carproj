@@ -70,7 +70,7 @@
 //   ros::NodeHandle node;
 //   ros::NodeHandle nh("~");
 //   rfans_driver::Rfans_Driver* driver = new rfans_driver::Rfans_Driver(node, nh);
-//   pub_cloud = node.advertise<sensor_msgs::PointCloud2>("points_raw", 3);
+//   pub_cloud = node.advertise<sensor_msgs::msg::PointCloud2>("points_raw", 3);
 //   dynamic_reconfigure::Server<rfans_driver::FilterParamsConfig> server;
 //   dynamic_reconfigure::Server<rfans_driver::FilterParamsConfig>::CallbackType f;
 //   f = boost::bind(&callback,_1,_2);
@@ -196,9 +196,10 @@ int main(int argc, char **argv)
   pub_cloud = node->create_publisher<sensor_msgs::msg::PointCloud2>("points_raw", 3);
 
   // 3. 注册参数修改回调
-  node->add_on_set_parameters_callback(
+  auto _cb_handle =node->add_on_set_parameters_callback(
     std::bind(parameters_callback, _1)
   );
+  (void)_cb_handle; 
 
   // 4. 读取并解析 RT 转换参数
   std::string rt_str;

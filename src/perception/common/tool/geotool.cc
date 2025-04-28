@@ -1,119 +1,145 @@
 
 #include "geotool.h"
-#define ACCEPT_USE_OF_DEPRECATED_PROJ_API_H
-#include "proj_api.h"
-GeoTool geo;
-double Angle2Heading(double input)
-{
-  double output = 90 - input;
-  if (output < 0)
-    output += 360;
-  return output;
+
+#include <proj.h>
+#include <cmath>          // std::sin / std::cos / M_PI
+#include <string>
+#include <cmath>
+using std::cos;
+using std::sin;
+
+namespace {
+
+constexpr double DEG2RAD = M_PI / 180.0;
+constexpr double RAD2DEG = 180.0 / M_PI;
+
+/* 旧版工具函数保持原名，内部实现未变 */
+inline double Angle2Heading(double a) {
+  double h = 90.0 - a;
+  if (h < 0.0) h += 360.0;
+  return h;
 }
-double Heading2Angle(double input)
-{
-  double output = 90 - input;
-  if (output < -180)
-    output += 360;
-  return output;
+inline double Heading2Angle(double h) {
+  double a = 90.0 - h;
+  if (a < -180.0) a += 360.0;
+  return a;
 }
-int GeoTransform(const PointGCCS &pgccs, const int utm_zone, PointGPS &pgps)
+
+/* 构造 “CRS→CRS” 变换对象的小工具。失败返回 nullptr */
+PJ* createTransform(PJ_CONTEXT* C,
+                    const std::string& src,
+                    const std::string& dst)
 {
-  RETURN_EQ(const_cast<PointGCCS &>(pgccs).Check(), 0);
-  double x = pgccs.xg, y = pgccs.yg;
-  double z = 0.;
-  std::string utmInit = "+proj=utm +zone=" + std::to_string(utm_zone) +
-                        "+ellps=WGS84 +datum=WGS84 +units=m +no_defs";
-  projPJ lonlat = pj_init_plus(" +proj=longlat +datum=WGS84 +no_defs");
-  projPJ utm = pj_init_plus(utmInit.c_str());
-  RETURN_NE(pj_transform(utm, lonlat, 1, 1, &x, &y, &z), 0);
-  x *= RAD_TO_DEG;
-  y *= RAD_TO_DEG;
-  pgps.lon = x;
-  pgps.lat = y;
+  PJ* src_crs = proj_create(C, src.c_str());
+  PJ* dst_crs = proj_create(C, dst.c_str());
+  PJ* tr      = proj_create_crs_to_crs_from_pj(C, src_crs, dst_crs,
+                                               /*area_of_interest*/nullptr,
+                                               /*options*/nullptr);
+  proj_destroy(src_crs);
+  proj_destroy(dst_crs);
+  return tr;
+}
+
+} // anonymous namespace
+/* -------------------------------------------------------------------------- */
+
+GeoTool geo;   // 全局实例与旧代码保持一致
+
+/* ==================== GCCS → GPS ==================== */
+int GeoTransform(const PointGCCS& pgccs, int utm_zone, PointGPS& pgps)
+{
+  RETURN_EQ(const_cast<PointGCCS&>(pgccs).Check(), 0);
+
+  /* ---- 创建变换 ---- */
+  PJ_CONTEXT* C = proj_context_create();
+  std::string utm_def = "+proj=utm +zone=" + std::to_string(utm_zone) +
+                        " +ellps=WGS84 +datum=WGS84 +units=m +no_defs";
+  PJ* tr = createTransform(C, utm_def, "+proj=longlat +datum=WGS84 +no_defs");
+  RETURN_NE(tr == nullptr, true);
+
+  /* ---- 执行坐标转换 ---- */
+  PJ_COORD in  = proj_coord(pgccs.xg, pgccs.yg, 0, 0);
+  PJ_COORD out = proj_trans(tr, PJ_INV, in);   // UTM → LonLat
+
+  pgps.lon     = proj_todeg(out.lp.lam);       // 弧度→度
+  pgps.lat     = proj_todeg(out.lp.phi);
   pgps.heading = Angle2Heading(pgccs.angle);
-  pgps.heading = pgccs.angle;
-  if (lonlat)
-  {
-    pj_free(lonlat);
-  }
-  if (utm)
-  {
-    pj_free(utm);
-  }
-  return 0;
-}
-int GeoTransform(const PointGPS &pgps, PointGCCS &pgccs)
-{
-  RETURN_EQ(const_cast<PointGPS &>(pgps).Check(), 0);
-  double lon = pgps.lon, lat = pgps.lat;
-  double height = 0.;
-  std::string utmInit = "+proj=utm +zone=" + std::to_string(geo.GetLongZone(lon)) +
-                        "+ellps=WGS84 +datum=WGS84 +units=m +no_defs";
-  projPJ lonlat = pj_init_plus(" +proj=longlat +datum=WGS84 +no_defs");
-  projPJ utm = pj_init_plus(utmInit.c_str());
-  lon *= DEG_TO_RAD;
-  lat *= DEG_TO_RAD;
-  RETURN_NE(pj_transform(lonlat, utm, 1, 1, &lon, &lat, &height), 0);
-  pgccs.xg = lon;
-  pgccs.yg = lat;
-  pgccs.angle = Heading2Angle(pgps.heading);
-  pgccs.angle = pgps.heading;
-  if (lonlat)
-  {
-    pj_free(lonlat);
-  }
-  if (utm)
-  {
-    pj_free(utm);
-  }
+
+  /* ---- 清理 ---- */
+  proj_destroy(tr);
+  proj_context_destroy(C);
   return 0;
 }
 
-int GeoTransform(const PointGCCS &pgccs, const double cell_size,
-                 PointGICS &pgics)
+/* ==================== GPS → GCCS ==================== */
+int GeoTransform(const PointGPS& pgps, PointGCCS& pgccs)
 {
-  RETURN_EQ(const_cast<PointGCCS &>(pgccs).Check(), 0);
+  RETURN_EQ(const_cast<PointGPS&>(pgps).Check(), 0);
+
+  int zone = geo.GetLongZone(pgps.lon);
+  std::string utm_def = "+proj=utm +zone=" + std::to_string(zone) +
+                        " +ellps=WGS84 +datum=WGS84 +units=m +no_defs";
+
+  PJ_CONTEXT* C = proj_context_create();
+  PJ* tr = createTransform(C, "+proj=longlat +datum=WGS84 +no_defs", utm_def);
+  RETURN_NE(tr == nullptr, true);
+
+  PJ_COORD in  = proj_coord(proj_torad(pgps.lon),
+                            proj_torad(pgps.lat),
+                            0, 0);
+  PJ_COORD out = proj_trans(tr, PJ_FWD, in);   // LonLat → UTM
+
+  pgccs.xg   = out.xy.x;
+  pgccs.yg   = out.xy.y;
+  pgccs.angle = Heading2Angle(pgps.heading);
+
+  proj_destroy(tr);
+  proj_context_destroy(C);
+  return 0;
+}
+
+/* ==================== 纯几何变换：不依赖 PROJ ==================== */
+int GeoTransform(const PointGCCS& pgccs, double cell_size, PointGICS& pgics)
+{
+  RETURN_EQ(const_cast<PointGCCS&>(pgccs).Check(), 0);
   pgics.ug = static_cast<long>(pgccs.xg / cell_size);
   pgics.vg = static_cast<long>(pgccs.yg / cell_size);
   return 0;
 }
-int GeoTransform(const PointGICS &pgics, const double cell_size,
-                 PointGCCS &pgccs)
+
+int GeoTransform(const PointGICS& pgics, double cell_size, PointGCCS& pgccs)
 {
-  RETURN_EQ(const_cast<PointGICS &>(pgics).Check(), 0);
-  pgccs.xg = static_cast<double>(pgics.ug * cell_size);
-  pgccs.yg = static_cast<double>(pgics.vg * cell_size);
-  return 0;
-}
-int GeoTransform(const PointGCCS &car_pgccs, const PointGCCS &target_pgccs,
-                 PointVCS &output_pvcs)
-{
-  RETURN_EQ(const_cast<PointGCCS &>(car_pgccs).Check(), 0);
-  RETURN_EQ(const_cast<PointGCCS &>(target_pgccs).Check(), 0);
-  double rad = car_pgccs.angle * DEG_TO_RAD;
-  double dx = target_pgccs.xg - car_pgccs.xg;
-  double dy = target_pgccs.yg - car_pgccs.yg;
-  output_pvcs.x = +dx * cos(rad) + dy * sin(rad);
-  output_pvcs.y = -dx * sin(rad) + dy * cos(rad);
-  output_pvcs.angle = target_pgccs.angle - car_pgccs.angle;
-  if (output_pvcs.angle >= 360)
-    output_pvcs.angle -= 360;
+  RETURN_EQ(const_cast<PointGICS&>(pgics).Check(), 0);
+  pgccs.xg = static_cast<double>(pgics.ug) * cell_size;
+  pgccs.yg = static_cast<double>(pgics.vg) * cell_size;
   return 0;
 }
 
-int GeoTransform(const PointGCCS &car_pgccs, const PointVCS &target_pvcs,
-                 PointGCCS &output_pgccs)
+int GeoTransform(const PointGCCS& car, const PointGCCS& target, PointVCS& pvcs)
 {
-  RETURN_EQ(const_cast<PointGCCS &>(car_pgccs).Check(), 0);
-  double rad = car_pgccs.angle * DEG_TO_RAD;
-  output_pgccs.xg = target_pvcs.x * cos(rad) - target_pvcs.y * sin(rad);
-  output_pgccs.yg = target_pvcs.x * sin(rad) + target_pvcs.y * cos(rad);
-  output_pgccs.xg += car_pgccs.xg;
-  output_pgccs.yg += car_pgccs.yg;
-  output_pgccs.angle = car_pgccs.angle + target_pvcs.angle;
-  if (output_pgccs.angle >= 360)
-    output_pgccs.angle -= 360;
+  RETURN_EQ(const_cast<PointGCCS&>(car).Check(), 0);
+  RETURN_EQ(const_cast<PointGCCS&>(target).Check(), 0);
+
+  double rad = car.angle * DEG2RAD;
+  double dx  = target.xg - car.xg;
+  double dy  = target.yg - car.yg;
+
+  pvcs.x     =  dx * std::cos(rad) + dy * std::sin(rad);
+  pvcs.y     = -dx * std::sin(rad) + dy * std::cos(rad);
+  pvcs.angle = target.angle - car.angle;
+  if (pvcs.angle >= 360) pvcs.angle -= 360;
+  return 0;
+}
+
+int GeoTransform(const PointGCCS& car, const PointVCS& pvcs, PointGCCS& out)
+{
+  RETURN_EQ(const_cast<PointGCCS&>(car).Check(), 0);
+
+  double rad = car.angle * DEG2RAD;
+  out.xg     = pvcs.x * std::cos(rad) - pvcs.y * std::sin(rad) + car.xg;
+  out.yg     = pvcs.x * std::sin(rad) + pvcs.y * std::cos(rad) + car.yg;
+  out.angle  = car.angle + pvcs.angle;
+  if (out.angle >= 360) out.angle -= 360;
   return 0;
 }
 

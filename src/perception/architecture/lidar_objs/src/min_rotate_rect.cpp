@@ -1,4 +1,7 @@
 #include "../include/min_rotate_rect.h"
+#include <cmath>
+using std::cos;
+using std::sin;
 namespace perception
 {
     min_rotate_rect::min_rotate_rect(/* args */)

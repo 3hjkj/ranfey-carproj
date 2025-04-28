@@ -1,7 +1,7 @@
 #pragma once
 #include <rclcpp/rclcpp.hpp>
 
-#include "communication/include/rosbridge.hpp"
+#include "communication/include/rosbridge.h"
 #include "architecture/lidar_cells/include/lidar_cell.h"
 #include "architecture/lidar_objs/include/grid_cluster.h"
 

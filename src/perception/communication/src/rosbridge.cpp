@@ -1,13 +1,8 @@
-#include "communication/include/rosbridge.hpp"
+#include "communication/include/rosbridge.h"
 
 #include <pcl_conversions/pcl_conversions.h>   // for pcl::fromROSMsg
 
-/*-----------------------------------------------------------------------------
- *  helper: 统一打印宏（LOG 同级）
- *---------------------------------------------------------------------------*/
-#define INFO(fmt, ...)  RCLCPP_INFO (node_->get_logger(), fmt, ##__VA_ARGS__)
-#define WARN(fmt, ...)  RCLCPP_WARN (node_->get_logger(), fmt, ##__VA_ARGS__)
-#define ERROR(fmt, ...) RCLCPP_ERROR(node_->get_logger(), fmt, ##__VA_ARGS__)
+
 
 namespace perception
 {
