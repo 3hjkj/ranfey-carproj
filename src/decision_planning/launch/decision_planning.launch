@@ -1,0 +1,5 @@
+<launch>
+<node pkg="decision_planning" name="decision_planning" exec="decision_planning" output="screen" cwd="node" respawn ="true">
+    <param name="global_path" value="$(find route_record)/global_trace.txt" />
+  </node>
+</launch>
