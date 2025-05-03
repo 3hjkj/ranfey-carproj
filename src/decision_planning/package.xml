@@ -1,0 +1,27 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>decision_planning</name>
+  <version>0.0.0</version>
+  <description>C++ decision and path-planning nodes.</description>
+
+  <maintainer email="1076246@qq.com">weiluo</maintainer>
+  <license>Apache-2.0</license>
+
+  <!-- 构建工具 -->
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <!-- 构建 & 运行依赖 -->
+  <depend>rclcpp</depend>
+  <depend>geometry_msgs</depend>
+  <depend>decision_planning_msgs</depend>
+  <depend>localization_msgs</depend>
+  <depend>can_control_msgs</depend>
+  <depend>lidar_msgs</depend>
+  <depend>tf2</depend>
+  <depend>tf2_geometry_msgs</depend>
+  <depend>visualization_msgs</depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>
