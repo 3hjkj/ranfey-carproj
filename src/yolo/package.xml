@@ -1,0 +1,27 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>yolo</name>
+  <version>0.0.0</version>
+  <description>YOLO detection package in ROS 2</description>
+
+  <maintainer email="2219349024@qq.com">ranfey</maintainer>
+  <license>MIT</license>
+
+  <!-- 必要的构建工具 -->
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <!-- Python ROS 2 节点运行支持 -->
+  <exec_depend>rclpy</exec_depend>
+
+  <!-- 图像处理与消息依赖 -->
+  <exec_depend>cv_bridge</exec_depend>
+  <exec_depend>image_transport</exec_depend>
+  <exec_depend>sensor_msgs</exec_depend>
+  <exec_depend>std_msgs</exec_depend>
+
+  <!-- 若你还有 .msg 自定义内容，可添加 message_build/message_runtime 等 -->
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

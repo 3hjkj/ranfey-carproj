@@ -1,0 +1,996 @@
+circle_r0.984322   cell_x_utm:-69.5878    cell_y_utm:348.702
+ yaw_vel heading:4.79634    heading k:0
+ ~~~~~ 有障碍物 ~~~~~~~~~~~~
+ix:1
+k:37
+V_RefPoint:17
+x_vel:-69.7805 y_vel:360.688
+.........
+cell.x11.9599      cell.y-0.813022
+x:-68.8222   y:349.032
+circle_r0.833809   cell_x_utm:-69.5878    cell_y_utm:348.702
+ yaw_vel heading:4.79634    heading k:0
+ ~~~~~ 有障碍物 ~~~~~~~~~~~~
+ix:1
+k:38
+V_RefPoint:17
+x_vel:-69.7805 y_vel:360.688
+.........
+cell.x11.9599      cell.y-0.813022
+x:-68.7988   y:348.716
+circle_r0.789054   cell_x_utm:-69.5878    cell_y_utm:348.702
+ yaw_vel heading:4.79634    heading k:0
+ ~~~~~ 有障碍物 ~~~~~~~~~~~~
+ix:1
+k:39
+V_RefPoint:17
+x_vel:-69.7805 y_vel:360.688
+.........
+cell.x11.9599      cell.y-0.813022
+x:-68.7755   y:348.399
+circle_r0.866804   cell_x_utm:-69.5878    cell_y_utm:348.702
+ yaw_vel heading:4.79634    heading k:0
+ ~~~~~ 有障碍物 ~~~~~~~~~~~~
+ix:1
+k:40
+V_RefPoint:17
+x_vel:-69.7805 y_vel:360.688
+.........
+cell.x13.0558      cell.y-0.664729
+x:-68.7521   y:348.079
+circle_r0.751081   cell_x_utm:-69.3481    cell_y_utm:347.622
+ yaw_vel heading:4.79634    heading k:0
+ ~~~~~ 有障碍物 ~~~~~~~~~~~~
+ix:1
+k:41
+V_RefPoint:17
+x_vel:-69.7805 y_vel:360.688
+.........
+cell.x13.0558      cell.y-0.664729
+x:-68.7289   y:347.76
+circle_r0.634343   cell_x_utm:-69.3481    cell_y_utm:347.622
+ yaw_vel heading:4.79634    heading k:0
+ ~~~~~ 有障碍物 ~~~~~~~~~~~~
+ix:1
+k:42
+V_RefPoint:17
+x_vel:-69.7805 y_vel:360.688
+.........
+cell.x13.0558      cell.y-0.664729
+x:-68.7059   y:347.439
+circle_r0.667835   cell_x_utm:-69.3481    cell_y_utm:347.622
+ yaw_vel heading:4.79634    heading k:0
+ ~~~~~ 有障碍物 ~~~~~~~~~~~~
+ix:1
+k:43
+V_RefPoint:17
+x_vel:-69.7805 y_vel:360.688
+.........
+cell.x13.0558      cell.y-0.664729
+x:-68.6832   y:347.118
+circle_r0.834667   cell_x_utm:-69.3481    cell_y_utm:347.622
+ yaw_vel heading:4.79634    heading k:0
+ ~~~~~ 有障碍物 ~~~~~~~~~~~~
+ix:1
+k:44
+V_RefPoint:17
+x_vel:-69.7805 y_vel:360.688
+.........
+cell.x13.8554      cell.y-0.552035
+x:-68.661   y:346.798
+circle_r0.509126   cell_x_utm:-69.1688    cell_y_utm:346.835
+ yaw_vel heading:4.79634    heading k:0
+ ~~~~~ 有障碍物 ~~~~~~~~~~~~
+ix:1
+k:45
+V_RefPoint:17
+x_vel:-69.7805 y_vel:360.688
+.........
+cell.x13.8554      cell.y-0.552035
+x:-68.6393   y:346.48
+circle_r0.637553   cell_x_utm:-69.1688    cell_y_utm:346.835
+ yaw_vel heading:4.79634    heading k:0
+ ~~~~~ 有障碍物 ~~~~~~~~~~~~
+ix:1
+k:46
+V_RefPoint:17
+x_vel:-69.7805 y_vel:360.688
+.........
+cell.x13.8554      cell.y-0.552035
+x:-68.6183   y:346.164
+circle_r0.868056   cell_x_utm:-69.1688    cell_y_utm:346.835
+ yaw_vel heading:4.79634    heading k:0
+ ~~~~~ 有障碍物 ~~~~~~~~~~~~
+ix:1
+k:47
+V_RefPoint:17
+x_vel:-69.7805 y_vel:360.688
+.........
+cell.x15.1412      cell.y-0.424236
+x:-68.5965   y:345.848
+circle_r0.440543   cell_x_utm:-68.9336    cell_y_utm:345.564
+ yaw_vel heading:4.79634    heading k:0
+ ~~~~~ 有障碍物 ~~~~~~~~~~~~
+ix:1
+k:48
+V_RefPoint:17
+x_vel:-69.7805 y_vel:360.688
+.........
+cell.x15.1412      cell.y-0.424236
+x:-68.574   y:345.531
+circle_r0.361087   cell_x_utm:-68.9336    cell_y_utm:345.564
+ yaw_vel heading:4.79634    heading k:0
+ ~~~~~ 有障碍物 ~~~~~~~~~~~~
+ix:1
+k:49
+V_RefPoint:17
+x_vel:-69.7805 y_vel:360.688
+.........
+cell.x15.1412      cell.y-0.424236
+x:-68.5512   y:345.211
+circle_r0.52084   cell_x_utm:-68.9336    cell_y_utm:345.564
+ yaw_vel heading:4.79634    heading k:0
+ ~~~~~ 有障碍物 ~~~~~~~~~~~~
+ix:1
+k:50
+V_RefPoint:17
+x_vel:-69.7805 y_vel:360.688
+.........
+cell.x15.1412      cell.y-0.424236
+x:-68.5281   y:344.89
+circle_r0.786634   cell_x_utm:-68.9336    cell_y_utm:345.564
+ yaw_vel heading:4.79634    heading k:0
+ ~~~~~ 有障碍物 ~~~~~~~~~~~~
+ix:1
+k:51
+V_RefPoint:17
+x_vel:-69.7805 y_vel:360.688
+.........
+cell.x15.9667      cell.y-0.291201
+x:-68.5049   y:344.567
+circle_r0.29313   cell_x_utm:-68.7318    cell_y_utm:344.753
+ yaw_vel heading:4.79634    heading k:0
+ ~~~~~ 有障碍物 ~~~~~~~~~~~~
+ix:1
+k:52
+V_RefPoint:17
+x_vel:-69.7805 y_vel:360.688
+.........
+cell.x15.9667      cell.y-0.291201
+x:-68.4815   y:344.242
+circle_r0.56916   cell_x_utm:-68.7318    cell_y_utm:344.753
+ yaw_vel heading:4.79634    heading k:0
+ ~~~~~ 有障碍物 ~~~~~~~~~~~~
+ix:1
+k:53
+V_RefPoint:17
+x_vel:-69.7805 y_vel:360.688
+.........
+cell.x15.9667      cell.y-0.291201
+x:-68.4577   y:343.915
+circle_r0.88142   cell_x_utm:-68.7318    cell_y_utm:344.753
+ yaw_vel heading:4.79634    heading k:0
+ ~~~~~ 有障碍物 ~~~~~~~~~~~~
+ix:1
+k:54
+V_RefPoint:17
+x_vel:-69.7805 y_vel:360.688
+.........
+cell.x16.9387      cell.y-0.173913
+x:-68.4336   y:343.589
+circle_r0.22818   cell_x_utm:-68.5334    cell_y_utm:343.794
+ yaw_vel heading:4.79634    heading k:0
+ ~~~~~ 有障碍物 ~~~~~~~~~~~~
+ix:1
+k:55
+V_RefPoint:17
+x_vel:-69.7805 y_vel:360.688
+.........
+cell.x16.9387      cell.y-0.173913
+x:-68.409   y:343.262
+circle_r0.546651   cell_x_utm:-68.5334    cell_y_utm:343.794
+ yaw_vel heading:4.79634    heading k:0
+ ~~~~~ 有障碍物 ~~~~~~~~~~~~
+ix:1
+k:56
+V_RefPoint:17
+x_vel:-69.7805 y_vel:360.688
+.........
+cell.x16.9387      cell.y-0.173913
+x:-68.3834   y:342.935
+circle_r0.87172   cell_x_utm:-68.5334    cell_y_utm:343.794
+ yaw_vel heading:4.79634    heading k:0
+ ~~~~~ 有障碍物 ~~~~~~~~~~~~
+ix:1
+k:57
+V_RefPoint:17
+x_vel:-69.7805 y_vel:360.688
+.........
+cell.x17.7729      cell.y-0.0908963
+x:-68.3562   y:342.609
+circle_r0.361788   cell_x_utm:-68.3807    cell_y_utm:342.97
+ yaw_vel heading:4.79634    heading k:0
+ ~~~~~ 有障碍物 ~~~~~~~~~~~~
+ix:1
+k:58
+V_RefPoint:17
+x_vel:-69.7805 y_vel:360.688
+.........
+cell.x17.7729      cell.y-0.0908963
+x:-68.3288   y:342.284
+circle_r0.688197   cell_x_utm:-68.3807    cell_y_utm:342.97
+ yaw_vel heading:4.79634    heading k:0
+ ~~~~~ 有障碍物 ~~~~~~~~~~~~
+ix:1
+k:59
+V_RefPoint:17
+x_vel:-69.7805 y_vel:360.688
+.........
+cell.x19.4508      cell.y0.127447
+x:-68.3005   y:341.959
+circle_r0.70035   cell_x_utm:-68.0225    cell_y_utm:341.316
+ yaw_vel heading:4.79634    heading k:0
+ ~~~~~ 有障碍物 ~~~~~~~~~~~~
+ix:1
+k:60
+V_RefPoint:17
+x_vel:-69.7805 y_vel:360.688
+.........
+cell.x19.4508      cell.y0.127447
+x:-68.2703   y:341.637
+circle_r0.405301   cell_x_utm:-68.0225    cell_y_utm:341.316
+ yaw_vel heading:4.79634    heading k:0
+ ~~~~~ 有障碍物 ~~~~~~~~~~~~
+ix:1
+k:61
+V_RefPoint:17
+x_vel:-69.7805 y_vel:360.688
+.........
+cell.x19.4508      cell.y0.127447
+x:-68.2387   y:341.32
+circle_r0.216251   cell_x_utm:-68.0225    cell_y_utm:341.316
+ yaw_vel heading:4.79634    heading k:0
+ ~~~~~ 有障碍物 ~~~~~~~~~~~~
+ix:1
+k:62
+V_RefPoint:17
+x_vel:-69.7805 y_vel:360.688
+.........
+cell.x19.4508      cell.y0.127447
+x:-68.2084   y:341.003
+circle_r0.364041   cell_x_utm:-68.0225    cell_y_utm:341.316
+ yaw_vel heading:4.79634    heading k:0
+ ~~~~~ 有障碍物 ~~~~~~~~~~~~
+ix:1
+k:63
+V_RefPoint:17
+x_vel:-69.7805 y_vel:360.688
+.........
+cell.x19.4508      cell.y0.127447
+x:-68.1781   y:340.69
+circle_r0.644806   cell_x_utm:-68.0225    cell_y_utm:341.316
+ yaw_vel heading:4.79634    heading k:0
+ ~~~~~ 有障碍物 ~~~~~~~~~~~~
+ix:1
+k:64
+V_RefPoint:17
+x_vel:-69.7805 y_vel:360.688
+.........
+cell.x19.4508      cell.y0.127447
+x:-68.1461   y:340.38
+circle_r0.943863   cell_x_utm:-68.0225    cell_y_utm:341.316
+ yaw_vel heading:4.79634    heading k:0
+ ~~~~~ 有障碍物 ~~~~~~~~~~~~
+ix:1
+k:65
+V_RefPoint:17
+x_vel:-69.7805 y_vel:360.688
+.........
+cell.x19.7828      cell.y0.110273
+x:-68.115   y:340.07
+circle_r0.919325   cell_x_utm:-68.0118    cell_y_utm:340.984
+ yaw_vel heading:4.79634    heading k:0
+ ~~~~~ 有障碍物 ~~~~~~~~~~~~
+ix:1
+k:67
+V_RefPoint:17
+x_vel:-69.7805 y_vel:360.688
+.........
+cell.x21.6179      cell.y-0.87069
+x:-68.0556   y:339.449
+circle_r0.865846   cell_x_utm:-68.8354    cell_y_utm:339.073
+ yaw_vel heading:4.79634    heading k:0
+ ~~~~~ 有障碍物 ~~~~~~~~~~~~
+ix:1
+k:68
+V_RefPoint:17
+x_vel:-69.7805 y_vel:360.688
+.........
+cell.x21.6179      cell.y-0.87069
+x:-68.0262   y:339.138
+circle_r0.811764   cell_x_utm:-68.8354    cell_y_utm:339.073
+ yaw_vel heading:4.79634    heading k:0
+ ~~~~~ 有障碍物 ~~~~~~~~~~~~
+ix:1
+k:69
+V_RefPoint:17
+x_vel:-69.7805 y_vel:360.688
+.........
+cell.x21.6179      cell.y-0.87069
+x:-67.9978   y:338.825
+circle_r0.873655   cell_x_utm:-68.8354    cell_y_utm:339.073
+ yaw_vel heading:4.79634    heading k:0
+ ~~~~~ 有障碍物 ~~~~~~~~~~~~
+ix:1
+k:79
+V_RefPoint:17
+x_vel:-69.7805 y_vel:360.688
+.........
+cell.x25.732      cell.y-0.742248
+x:-67.6963   y:335.61
+circle_r0.913978   cell_x_utm:-68.3624    cell_y_utm:334.984
+ yaw_vel heading:4.79634    heading k:0
+ cell.size1:100
+ cell.size2:100
+10.9249
+change_lane_vfpoint:0
+V_RefPoint:17
+路径:10.9249米内有障碍物
+路径:10.9249米内有障碍物
+路径:10.9249米内有障碍物
+路径:10.9249米内有障碍物
+路径:10.9249米内有障碍物
+distance_loc_min:0.0447217
+V_RefPoint:17
+distance_loc_min:0.0447217
+V_RefPoint:17
+distance_loc_min:0.0447217
+V_RefPoint:17
+distance_loc_min:0.0447217
+V_RefPoint:17
+distance_loc_min:0.0447217
+V_RefPoint:17
+distance_loc_min:0.0447217
+V_RefPoint:17
+distance_loc_min:0.0447217
+V_RefPoint:17
+distance_loc_min:0.0447217
+V_RefPoint:17
+ ~~~~~ 有障碍物 ~~~~~~~~~~~~
+ix:1
+k:34
+V_RefPoint:17
+x_vel:-69.7805 y_vel:360.688
+.........
+cell.x10.9789      cell.y-0.929632
+x:-68.8928   y:349.981
+circle_r0.946004   cell_x_utm:-69.7862    cell_y_utm:349.67
+ yaw_vel heading:4.79634    heading k:0
+ ~~~~~ 有障碍物 ~~~~~~~~~~~~
+ix:1
+k:35
+V_RefPoint:17
+x_vel:-69.7805 y_vel:360.688
+.........
+cell.x10.9789      cell.y-0.929632
+x:-68.8691   y:349.664
+circle_r0.917084   cell_x_utm:-69.7862    cell_y_utm:349.67
+ yaw_vel heading:4.79634    heading k:0
+ ~~~~~ 有障碍物 ~~~~~~~~~~~~
+ix:1
+k:36
+V_RefPoint:17
+x_vel:-69.7805 y_vel:360.688
+.........
+cell.x10.9789      cell.y-0.929632
+x:-68.8456   y:349.348
+circle_r0.993893   cell_x_utm:-69.7862    cell_y_utm:349.67
+ yaw_vel heading:4.79634    heading k:0
+ ~~~~~ 有障碍物 ~~~~~~~~~~~~
+ix:1
+k:37
+V_RefPoint:17
+x_vel:-69.7805 y_vel:360.688
+.........
+cell.x11.9553      cell.y-0.814509
+x:-68.8222   y:349.032
+circle_r0.833748   cell_x_utm:-69.5896    cell_y_utm:348.706
+ yaw_vel heading:4.79634    heading k:0
+ ~~~~~ 有障碍物 ~~~~~~~~~~~~
+ix:1
+k:38
+V_RefPoint:17
+x_vel:-69.7805 y_vel:360.688
+.........
+cell.x11.9553      cell.y-0.814509
+x:-68.7988   y:348.716
+circle_r0.790858   cell_x_utm:-69.5896    cell_y_utm:348.706
+ yaw_vel heading:4.79634    heading k:0
+ ~~~~~ 有障碍物 ~~~~~~~~~~~~
+ix:1
+k:39
+V_RefPoint:17
+x_vel:-69.7805 y_vel:360.688
+.........
+cell.x11.9553      cell.y-0.814509
+x:-68.7755   y:348.399
+circle_r0.870149   cell_x_utm:-69.5896    cell_y_utm:348.706
+ yaw_vel heading:4.79634    heading k:0
+ ~~~~~ 有障碍物 ~~~~~~~~~~~~
+ix:1
+k:40
+V_RefPoint:17
+x_vel:-69.7805 y_vel:360.688
+.........
+cell.x13.0103      cell.y-0.66919
+x:-68.7521   y:348.079
+circle_r0.731412   cell_x_utm:-69.3564    cell_y_utm:347.667
+ yaw_vel heading:4.79634    heading k:0
+ ~~~~~ 有障碍物 ~~~~~~~~~~~~
+ix:1
+k:41
+V_RefPoint:17
+x_vel:-69.7805 y_vel:360.688
+.........
+cell.x13.0103      cell.y-0.66919
+x:-68.7289   y:347.76
+circle_r0.634303   cell_x_utm:-69.3564    cell_y_utm:347.667
+ yaw_vel heading:4.79634    heading k:0
+ ~~~~~ 有障碍物 ~~~~~~~~~~~~
+ix:1
+k:42
+V_RefPoint:17
+x_vel:-69.7805 y_vel:360.688
+.........
+cell.x13.0103      cell.y-0.66919
+x:-68.7059   y:347.439
+circle_r0.689323   cell_x_utm:-69.3564    cell_y_utm:347.667
+ yaw_vel heading:4.79634    heading k:0
+ ~~~~~ 有障碍物 ~~~~~~~~~~~~
+ix:1
+k:43
+V_RefPoint:17
+x_vel:-69.7805 y_vel:360.688
+.........
+cell.x13.0103      cell.y-0.66919
+x:-68.6832   y:347.118
+circle_r0.868968   cell_x_utm:-69.3564    cell_y_utm:347.667
+ yaw_vel heading:4.79634    heading k:0
+ ~~~~~ 有障碍物 ~~~~~~~~~~~~
+ix:1
+k:44
+V_RefPoint:17
+x_vel:-69.7805 y_vel:360.688
+.........
+cell.x13.7787      cell.y-0.560081
+x:-68.661   y:346.798
+circle_r0.534256   cell_x_utm:-69.1832    cell_y_utm:346.911
+ yaw_vel heading:4.79634    heading k:0
+ ~~~~~ 有障碍物 ~~~~~~~~~~~~
+ix:1
+k:45
+V_RefPoint:17
+x_vel:-69.7805 y_vel:360.688
+.........
+cell.x13.7787      cell.y-0.560081
+x:-68.6393   y:346.48
+circle_r0.693906   cell_x_utm:-69.1832    cell_y_utm:346.911
+ yaw_vel heading:4.79634    heading k:0
+ ~~~~~ 有障碍物 ~~~~~~~~~~~~
+ix:1
+k:46
+V_RefPoint:17
+x_vel:-69.7805 y_vel:360.688
+.........
+cell.x13.7787      cell.y-0.560081
+x:-68.6183   y:346.164
+circle_r0.936504   cell_x_utm:-69.1832    cell_y_utm:346.911
+ yaw_vel heading:4.79634    heading k:0
+ ~~~~~ 有障碍物 ~~~~~~~~~~~~
+ix:1
+k:47
+V_RefPoint:17
+x_vel:-69.7805 y_vel:distance_loc_min:360.688
+.........
+cell.x15.0104      cell.y-0.450361
+x:-68.5965   y:345.848
+circle_r0.4051   cell_x_utm:-68.9706    cell_y_utm:345.693
+ yaw_vel heading:4.79634    heading k:0
+ ~~~~~ 有障碍物 ~~~~~~~~~~~~
+ix:1
+k:48
+V_RefPoint:17
+x_vel:-69.7805 y_vel:360.688
+.........
+cell.x15.0104      cell.y-0.450361
+x:-68.574   y:345.531
+circle_r0.428224   cell_x_utm:-68.9706    cell_y_utm:345.693
+ yaw_vel heading:4.79634    heading k:0
+ ~~~~~ 有障碍物 ~~~~~~~~~~~~
+ix:1
+k:49
+V_RefPoint:17
+x_vel:-69.7805 y_vel:360.688
+.........
+cell.x15.0104      cell.y-0.450361
+x:-68.5512   y:345.211
+circle_r0.638798   cell_x_utm:-68.9706    cell_y_utm:345.693
+ yaw_vel heading:4.79634    heading k:0
+ ~~~~~ 有障碍物 ~~~~~~~~~~~~
+ix:1
+k:50
+V_RefPoint:17
+x_vel:-69.7805 y_vel:360.688
+.........
+cell.x15.0104      cell.y-0.450361
+x:-68.5281   y:344.89
+circle_r0.916221   cell_x_utm:-68.9706    cell_y_utm:345.693
+ yaw_vel heading:4.79634    heading k:0
+ ~~~~~ 有障碍物 ~~~~~~~~~~~~
+ix:1
+k:51
+V_RefPoint:17
+x_vel:-69.7805 y_vel:360.688
+.........
+cell.x15.5639      cell.y-0.262965
+x:-68.5049   y:344.567
+circle_r0.633593   cell_x_utm:-68.7374    cell_y_utm:345.157
+ yaw_vel heading:4.79634    heading k:0
+ ~~~~~ 有障碍物 ~~~~~~~~~~~~
+ix:1
+k:52
+V_RefPoint:17
+x_vel:-69.7805 y_vel:360.688
+.........
+cell.x15.5639      cell.y-0.262965
+x:-68.4815   y:344.242
+circle_r0.950069   cell_x_utm:-68.7374    cell_y_utm:345.157
+ yaw_vel heading:4.79634    heading k:0
+ ~~~~~ 有障碍物 ~~~~~~~~~~~~
+ix:1
+k:53
+V_RefPoint:17
+x_vel:-69.7805 y_vel:360.688
+.........
+cell.x17.1356      cell.y-0.147409
+x:-68.4577   y:343.915
+circle_r0.316662   cell_x_utm:-68.4905    cell_y_utm:343.6
+ yaw_vel heading:4.79634    heading k:0
+ ~~~~~ 有障碍物 ~~~~~~~~~~~~
+ix:1
+k:54
+V_RefPoint:17
+x_vel:-69.7805 y_vel:360.688
+.........
+cell.x17.1356      cell.y-0.147409
+x:-68.4336   y:343.589
+circle_r0.0579611   cell_x_utm:-68.4905    cell_y_utm:343.6
+ yaw_vel heading:4.79634    heading k:0
+ ~~~~~ 有障碍物 ~~~~~~~~~~~~
+ix:1
+k:55
+V_RefPoint:17
+x_vel:-69.7805 y_vel:360.688
+.........
+cell.x17.1356      cell.y-0.147409
+x:-68.409   y:343.262
+circle_r0.348041   cell_x_utm:-68.4905    cell_y_utm:343.6
+ yaw_vel heading:4.79634    heading k:0
+ ~~~~~ 有障碍物 ~~~~~~~~~~~~
+ix:1
+k:56
+V_RefPoint:17
+x_vel:-69.7805 y_vel:360.688
+.........
+cell.x17.1356      cell.y-0.147409
+x:-68.3834   y:342.935
+circle_r0.673347   cell_x_utm:-68.4905    cell_y_utm:343.6
+ yaw_vel heading:4.79634    heading k:0
+ ~~~~~ 有障碍物 ~~~~~~~~~~~~
+ix:1
+k:57
+V_RefPoint:17
+x_vel:-69.7805 y_vel:360.688
+.........
+cell.x17.6168      cell.y-0.0940164
+x:-68.3562   y:342.609
+circle_r0.517855   cell_x_utm:-68.3969    cell_y_utm:343.125
+ yaw_vel heading:4.79634    heading k:0
+ ~~~~~ 有障碍物 ~~~~~~~~~~~~
+ix:1
+k:58
+V_RefPoint:17
+x_vel:-69.7805 y_vel:360.688
+.........
+cell.x17.6168      cell.y-0.0940164
+x:-68.3288   y:342.284
+circle_r0.844283   cell_x_utm:-68.3969    cell_y_utm:343.125
+ yaw_vel heading:4.79634    heading k:0
+ ~~~~~ 有障碍物 ~~~~~~~~~~~~
+ix:1
+k:67
+V_RefPoint:17
+x_vel:-69.7805 y_vel:360.688
+.........
+cell.x21.6174      cell.y-0.886104
+x:-68.0556   y:339.449
+circle_r0.880075   cell_x_utm:-68.8508    cell_y_utm:339.072
+ yaw_vel heading:4.79634    heading k:0
+ ~~~~~ 有障碍物 ~~~~~~~~~~~~
+ix:1
+k:68
+V_RefPoint:17
+x_vel:-69.7805 y_vel:360.688
+.........
+cell.x21.6174      cell.y-0.886104
+x:-68.0262   y:339.138
+circle_r0.82718   cell_x_utm:-68.8508    cell_y_utm:339.072
+ yaw_vel heading:4.79634    heading k:0
+ ~~~~~ 有障碍物 ~~~~~~~~~~~~
+ix:1
+k:69
+V_RefPoint:17
+x_vel:-69.7805 y_vel:360.688
+.........
+cell.x21.6174      cell.y-0.886104
+x:-67.9978   y:338.825
+circle_r0.888216   cell_x_utm:-68.8508    cell_y_utm:339.072
+ yaw_vel heading:4.79634    heading k:0
+ ~~~~~ 有障碍物 ~~~~~~~~~~~~
+ix:1
+k:79
+V_RefPoint:17
+x_vel:-69.7805 y_vel:360.688
+.........
+cell.x25.6753      cell.y-0.801593
+x:-67.6963   y:335.61
+circle_r0.928824   cell_x_utm:-68.4263    cell_y_utm:335.036
+ yaw_vel heading:4.79634    heading k:0
+ cell.size1:94
+ cell.size2:94
+10.9789
+change_lane_vfpoint:0
+V_RefPoint:17
+路径:10.9789米内有障碍物
+路径:10.9789米内有障碍物
+路径:10.9789米内有障碍物
+路径:10.9789米内有障碍物
+路径:10.9789米内有障碍物
+0.0447217
+V_RefPoint:17
+distance_loc_min:0.0447217
+V_RefPoint:17
+distance_loc_min:0.0447217
+V_RefPoint:17
+distance_loc_min:0.0447217
+V_RefPoint:17
+distance_loc_min:0.0447217
+V_RefPoint:17
+distance_loc_min:0.0447217
+V_RefPoint:17
+distance_loc_min:0.0447217
+V_RefPoint:17
+distance_loc_min:0.0447217
+V_RefPoint:17
+ ~~~~~ 有障碍物 ~~~~~~~~~~~~
+ix:1
+k:34
+V_RefPoint:17
+x_vel:-69.7805 y_vel:360.688
+.........
+cell.x10.9682      cell.y-0.933661
+x:-68.8928   y:349.981
+circle_r0.947319   cell_x_utm:-69.7911    cell_y_utm:349.68
+ yaw_vel heading:4.79634    heading k:0
+ ~~~~~ 有障碍物 ~~~~~~~~~~~~
+ix:1
+k:35
+V_RefPoint:17
+x_vel:-69.7805 y_vel:360.688
+.........
+cell.x10.9682      cell.y-0.933661
+x:-68.8691   y:349.664
+circle_r0.922114   cell_x_utm:-69.7911    cell_y_utm:349.68
+ yaw_vel heading:4.79634    heading k:0
+ ~~~~~ 有障碍物 ~~~~~~~~~~~~
+ix:1
+k:36
+V_RefPoint:17
+x_vel:-69.7805 y_vel:360.688
+.........
+cell.x11.9431      cell.y-0.815789
+x:-68.8456   y:349.348
+circle_r0.976706   cell_x_utm:-69.5919    cell_y_utm:348.718
+ yaw_vel heading:4.79634    heading k:0
+ ~~~~~ 有障碍物 ~~~~~~~~~~~~
+ix:1
+k:37
+V_RefPoint:17
+x_vel:-69.7805 y_vel:360.688
+.........
+cell.x11.9431      cell.y-0.815789
+x:-68.8222   y:349.032
+circle_r0.831247   cell_x_utm:-69.5919    cell_y_utm:348.718
+ yaw_vel heading:4.79634    heading k:0
+ ~~~~~ 有障碍物 ~~~~~~~~~~~~
+ix:1
+k:38
+V_RefPoint:17
+x_vel:-69.7805 y_vel:360.688
+.........
+cell.x11.9431      cell.y-0.815789
+x:-68.7988   y:348.716
+circle_r0.793095   cell_x_utm:-69.5919    cell_y_utm:348.718
+ yaw_vel heading:4.79634    heading k:0
+ ~~~~~ 有障碍物 ~~~~~~~~~~~~
+ix:1
+k:39
+V_RefPoint:17
+x_vel:-69.7805 y_vel:360.688
+.........
+cell.x11.9431      cell.y-0.815789
+x:-68.7755   y:348.399
+circle_r0.876606   cell_x_utm:-69.5919    cell_y_utm:348.718
+ yaw_vel heading:4.79634    heading k:0
+ ~~~~~ 有障碍物 ~~~~~~~~~~~~
+ix:1
+k:40
+V_RefPoint:17
+x_vel:-69.7805 y_vel:360.688
+.........
+cell.x12.9949      cell.y-0.674207
+x:-68.7521   y:348.079
+circle_r0.728393   cell_x_utm:-69.3626    cell_y_utm:347.682
+ yaw_vel heading:4.79634    heading k:0
+ ~~~~~ 有障碍物 ~~~~~~~~~~~~
+ix:1
+k:41
+V_RefPoint:17
+x_vel:-69.7805 y_vel:360.688
+.........
+cell.x12.9949      cell.y-0.674207
+x:-68.7289   y:347.76
+circle_r0.63854   cell_x_utm:-69.3626    cell_y_utm:347.682
+ yaw_vel heading:4.79634    heading k:0
+ ~~~~~ 有障碍物 ~~~~~~~~~~~~
+ix:1
+k:42
+V_RefPoint:17
+x_vel:-69.7805 y_vel:360.688
+.........
+cell.x12.9949      cell.y-0.674207
+x:-68.7059   y:347.439
+circle_r0.700282   cell_x_utm:-69.3626    cell_y_utm:347.682
+ yaw_vel heading:4.79634    heading k:0
+ ~~~~~ 有障碍物 ~~~~~~~~~~~~
+ix:1
+k:43
+V_RefPoint:17
+x_vel:-69.7805 y_vel:360.688
+.........
+cell.x12.9949      cell.y-0.674207
+x:-68.6832   y:347.118
+circle_r0.883281   cell_x_utm:-69.3626    cell_y_utm:347.682
+ yaw_vel heading:4.79634    heading k:0
+ ~~~~~ 有障碍物 ~~~~~~~~~~~~
+ix:1
+k:44
+V_RefPoint:17
+x_vel:-69.7805 y_vel:360.688
+.........
+cell.x13.6618      cell.y-0.565057
+x:-68.661   y:346.798
+circle_r0.583671   cell_x_utm:-69.198    cell_y_utm:347.027
+ yaw_vel heading:4.79634    heading k:0
+ ~~~~~ 有障碍物 ~~~~~~~~~~~~
+ix:1
+k:45
+V_RefPoint:17
+x_vel:-69.7805 y_vel:360.688
+.........
+cell.x13.6618      cell.y-0.565057
+x:-68.6393   y:346.48
+circle_r0.781794   cell_x_utm:-69.198    cell_y_utm:347.027
+ yaw_vel heading:4.79634    heading k:0
+ ~~~~~ 有障碍物 ~~~~~~~~~~~~
+ix:1
+k:46
+V_RefPoint:17
+x_vel:-69.7805 y_vel:360.688
+.........
+cell.x14.509      cell.y-0.503881
+x:-68.6183   y:346.164
+circle_r0.448275   cell_x_utm:-69.066    cell_y_utm:346.188
+ yaw_vel heading:4.79634    heading k:0
+ ~~~~~ 有障碍物 ~~~~~~~~~~~~
+ix:1
+k:47
+V_RefPoint:17
+x_vel:-69.7805 y_vel:360.688
+.........
+cell.x14.509      cell.y-0.503881
+x:-68.5965   y:345.848
+circle_r0.579492   cell_x_utm:-69.066    cell_y_utm:346.188
+ yaw_vel heading:4.79634    heading k:0
+ ~~~~~ 有障碍物 ~~~~~~~~~~~~
+ix:1
+k:48
+V_RefPoint:17
+x_vel:-69.7805 y_vel:360.688
+.........
+cell.x14.509      cell.y-0.503881
+x:-68.574   y:345.531
+circle_r0.820574   cell_x_utm:-69.066    cell_y_utm:346.188
+ yaw_vel heading:4.79634    heading k:0
+ ~~~~~ 有障碍物 ~~~~~~~~~~~~
+ix:1
+k:49
+V_RefPoint:17
+x_vel:-69.7805 y_vel:360.688
+.........
+cell.x15.1562      cell.y-0.4089
+x:-68.5512   y:345.211
+circle_r0.499458   cell_x_utm:-68.917    cell_y_utm:345.551
+ yaw_vel heading:4.79634    heading k:0
+ ~~~~~ 有障碍物 ~~~~~~~~~~~~
+ix:1
+k:50
+V_RefPoint:17
+x_vel:-69.7805 y_vel:360.688
+.........
+cell.x15.1562      cell.y-0.4089
+x:-68.5281   y:344.89
+circle_r0.766477   cell_x_utm:-68.917    cell_y_utm:345.551
+ yaw_vel heading:4.79634    heading k:0
+ ~~~~~ 有障碍物 ~~~~~~~~~~~~
+ix:1
+k:51
+V_RefPoint:17
+x_vel:-69.7805 y_vel:360.688
+.........
+cell.x15.5813      cell.y-0.270435
+x:-68.5049   y:344.567
+circle_r0.619143   cell_x_utm:-68.7434    cell_y_utm:345.139
+ yaw_vel heading:4.79634    heading k:0
+ ~~~~~ 有障碍物 ~~~~~~~~~~~~
+ix:1
+k:52
+V_RefPoint:17
+x_vel:-69.7805 y_vel:360.688
+.........
+cell.x15.5813      cell.y-0.270435
+x:-68.4815   y:344.242
+circle_r0.934385   cell_x_utm:-68.7434    cell_y_utm:345.139
+ yaw_vel heading:4.79634    heading k:0
+ ~~~~~ 有障碍物 ~~~~~~~~~~~~
+ix:1
+k:53
+V_RefPoint:17
+x_vel:-69.7805 y_vel:360.688
+.........
+cell.x17.2624      cell.y-0.134024
+x:-68.4577   y:343.915
+circle_r0.440334   cell_x_utm:-68.4665    cell_y_utm:343.475
+ yaw_vel heading:4.79634    heading k:0
+ ~~~~~ 有障碍物 ~~~~~~~~~~~~
+ix:1
+k:54
+V_RefPoint:17
+x_vel:-69.7805 y_vel:360.688
+.........
+cell.x17.2624      cell.y-0.134024
+x:-68.4336   y:343.589
+circle_r0.118657   cell_x_utm:-68.4665    cell_y_utm:343.475
+ yaw_vel heading:4.79634    heading k:0
+ ~~~~~ 有障碍物 ~~~~~~~~~~~~
+ix:1
+k:55
+V_RefPoint:17
+x_vel:-69.7805 y_vel:360.688
+.........
+cell.x17.2624      cell.y-0.134024
+x:-68.409   y:343.262
+circle_r0.220709   cell_x_utm:-68.4665    cell_y_utm:343.475
+ yaw_vel heading:4.79634    heading k:0
+ ~~~~~ 有障碍物 ~~~~~~~~~~~~
+ix:1
+k:56
+V_RefPoint:17
+x_vel:-69.7805 y_vel:360.688
+.........
+cell.x17.2624      cell.y-0.134024
+x:-68.3834   y:342.935
+circle_r0.545859   cell_x_utm:-68.4665    cell_y_utm:343.475
+ yaw_vel heading:4.79634    heading k:0
+ ~~~~~ 有障碍物 ~~~~~~~~~~~~
+ix:1
+k:57
+V_RefPoint:17
+x_vel:-69.7805 y_vel:360.688
+.........
+cell.x17.2624      cell.y-0.134024
+x:-68.3562   y:342.609
+circle_r0.873077   cell_x_utm:-68.4665    cell_y_utm:343.475
+ yaw_vel heading:4.79634    heading k:0
+ ~~~~~ 有障碍物 ~~~~~~~~~~~~
+ix:1
+k:58
+V_RefPoint:17
+x_vel:-69.7805 y_vel:360.688
+.........
+cell.x17.7974      cell.y-0.0827818
+x:-68.3288   y:342.284
+circle_r0.663836   cell_x_utm:-68.3706    cell_y_utm:342.946
+ yaw_vel heading:4.79634    heading k:0
+ ~~~~~ 有障碍物 ~~~~~~~~~~~~
+ix:1
+k:59
+V_RefPoint:17
+x_vel:-69.7805 y_vel:360.688
+distance_loc_min:0.0447217
+V_RefPoint:17
+.........
+cell.x17.7974      cell.y-0.0827818
+x:-68.3005   y:341.959
+circle_r0.989648   cell_x_utm:-68.3706    cell_y_utm:342.946
+ yaw_vel heading:4.79634    heading k:0
+ ~~~~~ 有障碍物 ~~~~~~~~~~~~
+ix:1
+k:66
+V_RefPoint:17
+x_vel:-69.7805 y_vel:360.688
+.........
+cell.x21.5982      cell.y-0.824193
+x:-68.0854   y:339.76
+circle_r0.968432   cell_x_utm:-68.7907    cell_y_utm:339.097
+ yaw_vel heading:4.79634    heading k:0
+ ~~~~~ 有障碍物 ~~~~~~~~~~~~
+ix:1
+k:67
+V_RefPoint:17
+x_vel:-69.7805 y_vel:360.688
+.........
+cell.x21.5982      cell.y-0.824193
+x:-68.0556   y:339.449
+circle_r0.815368   cell_x_utm:-68.7907    cell_y_utm:339.097
+ yaw_vel heading:4.79634    heading k:0
+ ~~~~~ 有障碍物 ~~~~~~~~~~~~
+ix:1
+k:68
+V_RefPoint:17
+x_vel:-69.7805 y_vel:360.688
+.........
+cell.x21.5982      cell.y-0.824193
+x:-68.0262   y:339.138
+circle_r0.765609   cell_x_utm:-68.7907    cell_y_utm:339.097
+ yaw_vel heading:4.79634    heading k:0
+ ~~~~~ 有障碍物 ~~~~~~~~~~~~
+ix:1
+k:69
+V_RefPoint:17
+x_vel:-69.7805 y_vel:360.688
+.........
+cell.x21.5982      cell.y-0.824193
+x:-67.9978   y:338.825
+circle_r0.838265   cell_x_utm:-68.7907    cell_y_utm:339.097
+ yaw_vel heading:4.79634    heading k:0
+ ~~~~~ 有障碍物 ~~~~~~~~~~~~
+ix:1
+k:79
+V_RefPoint:17
+x_vel:-69.7805 y_vel:360.688
+.........
+cell.x25.7044      cell.y-0.752677
+x:-67.6963   y:335.61
+circle_r0.905465   cell_x_utm:-68.3751    cell_y_utm:335.011
+ yaw_vel heading:4.79634    heading k:0
+ cell.size1:99
+ cell.size2:99
+10.9682
+change_lane_vfpoint:0
+V_RefPoint:17
+路径:10.9682米内有障碍物
+路径:10.9682米内有障碍物
+路径:10.9682米内有障碍物
+路径:10.9682米内有障碍物
+路径:10.9682米内有障碍物

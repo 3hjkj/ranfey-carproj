@@ -50,7 +50,7 @@ int main(int argc, char **argv)
       /* 转成 ROS2 Image 消息并发布 */
       auto msg = cv_bridge::CvImage(std_msgs::msg::Header(), "bgr8", frame).toImageMsg();
       pub.publish(msg);
-      resize(frame, frame, Size(1920, 1080));
+      resize(frame, frame, Size(1280, 720));
 
       imshow("CKCamera Display", frame);
        
