@@ -19,6 +19,7 @@ class YOLONode(Node):
         )
         self.bridge = CvBridge()
         self.model = YOLO("/home/nvidia/zhitai/qingling_ros2/src/yolo/src/yolo11x.pt")
+        self.model.to("cuda")
 
     def listener_callback(self, msg):
         cv_image = self.bridge.imgmsg_to_cv2(msg, "bgr8")
@@ -26,7 +27,9 @@ class YOLONode(Node):
         for box in results.boxes.xyxy.cpu().numpy():
             x1, y1, x2, y2 = box[:4].astype(int)
             cv2.rectangle(cv_image, (x1, y1), (x2, y2), (0, 255, 0), 2)
-        cv2.imshow("YOLO", cv_image)
+
+        cv_image_resized = cv2.resize(cv_image, (1280, 720))
+        cv2.imshow("YOLO", cv_image_resized)
         cv2.waitKey(1)
 
 

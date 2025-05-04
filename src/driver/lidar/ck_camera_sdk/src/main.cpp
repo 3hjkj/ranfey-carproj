@@ -50,13 +50,13 @@ int main(int argc, char **argv)
       /* 转成 ROS2 Image 消息并发布 */
       auto msg = cv_bridge::CvImage(std_msgs::msg::Header(), "bgr8", frame).toImageMsg();
       pub.publish(msg);
-      resize(frame, frame, Size(1280, 720));
+      // resize(frame, frame, Size(1280, 720));
 
-      imshow("CKCamera Display", frame);
+      // imshow("CKCamera Display", frame);
        
     }
-    int key = waitKey(30);
-    if (key == 27) break;
+    // int key = waitKey(30);
+    // if (key == 27) break;
 
     rclcpp::spin_some(node);   // 处理潜在回调（这里主要是让 Ctrl‑C 生效）
   }
