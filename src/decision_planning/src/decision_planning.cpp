@@ -15,7 +15,7 @@
 #include <vector>
 #include "tf2_geometry_msgs/tf2_geometry_msgs.hpp"
 #include "geometry_msgs/msg/pose_stamped.hpp"
-#include "visualization_msgs/msg/marker_array.hpp"c
+#include "visualization_msgs/msg/marker_array.hpp"
 #include "decision_planning_msgs/msg/decision_planning.hpp"
 #include "can_control_msgs/msg/autocontrol.hpp"
 /**定位**/
@@ -94,28 +94,23 @@ vector<int> road_label;
 
 
 
-void radar_callback(const radar_msgs::msg::SensorData& radar_msg)
+void radar_callback(const radar_msgs::msg::SensorData::SharedPtr radar_msg)
 {
-	//ROS_ERROR("+++++++===");
-	cout<<"x="<<radar_msg.x<<"y="<<radar_msg.y<<endl;
-	cout<<"x_v"<<radar_msg.vx<<"y_v"<<radar_msg.vy<<endl;
-	
-	if(radar_msg.x<12&&abs(radar_msg.vy)>0.3)
+	std::cout << "x=" << radar_msg->x << " y=" << radar_msg->y << std::endl;
+	std::cout << "x_v=" << radar_msg->vx << " y_v=" << radar_msg->vy << std::endl;
+
+	if (radar_msg->x < 12 && std::abs(radar_msg->vy) > 0.3)
 	{
-	
-		
-		radar_driving=true;
-		cout<<"vy="<<radar_msg.vy<<endl;
-	
+		radar_driving = true;
+		std::cout << "vy=" << radar_msg->vy << std::endl;
 	}
 	else
 	{
-		radar_driving=false;
+		radar_driving = false;
 	}
-
 }
-void lidar_callback(const lidar_msgs::msg::Cells::ConstPtr &msg)
-{
+
+void lidar_callback(const lidar_msgs::msg::Cells::SharedPtr msg){
 	cout << "lidar callback info" << endl;
 	vector<double> x;
 	vector<double> y;
@@ -284,7 +279,7 @@ void lidar_callback(const lidar_msgs::msg::Cells::ConstPtr &msg)
 	old_respoint = V_RefPoint;
 	if(true)
 	{
-		std_msgs::String obu_msg;
+		std_msgs::msg::String obu_msg;
 		obu_msg.data="traffic_obu";
 		traffic_obu->publish(obu_msg);
 
@@ -293,24 +288,24 @@ void lidar_callback(const lidar_msgs::msg::Cells::ConstPtr &msg)
 	fusion_pub->publish(msg_Lidar_self[trace_id]);
 }
 
-void fusion_callback(const can_control_msgs::msg::Autocontrol &msg)
+void fusion_callback(const can_control_msgs::msg::Autocontrol::SharedPtr msg)
 {
 	cout << "ok" << endl;
 }
 static int light_cont = 0;
-void camera_callback(const can_control_msgs::msg::Autocontrol &msg)
+void camera_callback(const can_control_msgs::msg::Autocontrol::SharedPtr msg)
 {
-	if (road_label[V_RefPoint] == 0 && (msg.left_traffic_light == 1 || msg.left_traffic_light == 2))
+	if (road_label[V_RefPoint] == 0 && (msg->left_traffic_light == 1 || msg->left_traffic_light == 2))
 	{ // 左转 红灯或在黄灯
 		traffic_ligt_driving = true;
 		light_cont = 30;
 	}
-	else if (road_label[V_RefPoint] == 1 && (msg.middle_traffic_light == 1 || msg.middle_traffic_light == 2))
+	else if (road_label[V_RefPoint] == 1 && (msg->middle_traffic_light == 1 || msg->middle_traffic_light == 2))
 	{ // 左转 红灯或在黄灯
 		traffic_ligt_driving = true;
 		light_cont = 30;
 	}
-	else if (road_label[V_RefPoint] == 2 && (msg.right_traffic_light == 1 || msg.right_traffic_light == 2))
+	else if (road_label[V_RefPoint] == 2 && (msg->right_traffic_light == 1 || msg->right_traffic_light == 2))
 	{ // 左转 红灯或在黄灯
 		traffic_ligt_driving = true;
 		light_cont = 30;
@@ -321,18 +316,18 @@ void camera_callback(const can_control_msgs::msg::Autocontrol &msg)
 	}
 	light_cont--;
 }
-void loc_callback(const localization_msgs::msg::Localization &msg)
+void loc_callback(const localization_msgs::msg::Localization::SharedPtr msg)
 {
 
 	m_local.lock();
-	if (msg.satellite_status == 4 || msg.satellite_status == 2)
+	if (msg->satellite_status == 4 || msg->satellite_status == 2)
 	{
 		gps_loc = true;
-		// cout<<msg.xy.x<<"  " <<msg.xy.y<<endl;
-		gps_loc_x = msg.xy.x;
-		gps_loc_y = msg.xy.y;
-		gps_loc_yaw = msg.xy.z / 180 * M_PI; // 航向角
-		gps_loc_pitch = msg.pose.pitch;
+		// cout<<msg->xy.x<<"  " <<msg->xy.y<<endl;
+		gps_loc_x = msg->xy.x;
+		gps_loc_y = msg->xy.y;
+		gps_loc_yaw = msg->xy.z / 180 * M_PI; // 航向角
+		gps_loc_pitch = msg->pose.pitch;
 	}
 	else
 	{
@@ -340,27 +335,27 @@ void loc_callback(const localization_msgs::msg::Localization &msg)
 	}
 	m_local.unlock();
 }
-void loc_slam_callback(const localization_msgs::msg::Localization &msg)
+void loc_slam_callback(const localization_msgs::msg::Localization::SharedPtr msg)
 {
 	m_local.lock();
-	if (msg.slam_loc_ok)
+	if (msg->slam_loc_ok)
 	{
 		tf2::Quaternion quat;
-        tf2::fromMsg(msg.salm_pose.pose.orientation, quat);   // ROS2 tf2 用法
+        tf2::fromMsg(msg->salm_pose.pose.orientation, quat);   // ROS2 tf2 用法
 		Eigen::Matrix3d own_utm_rotation;
 		double roll, pitch, yaw;					  // 定义存储r\p\y的容器
 		tf2::Matrix3x3(quat).getRPY(roll, pitch, yaw);
 		own_utm_rotation = Eigen::AngleAxisd(-slam_start_yaw + M_PI_2, Eigen::Vector3d::UnitZ()) *
 						   Eigen::AngleAxisd(0, Eigen::Vector3d::UnitY()) *
 						   Eigen::AngleAxisd(0, Eigen::Vector3d::UnitX());
-		Eigen::Vector3d cell_pos(msg.salm_pose.pose.position.x, msg.salm_pose.pose.position.y, 0);
+		Eigen::Vector3d cell_pos(msg->salm_pose.pose.position.x, msg->salm_pose.pose.position.y, 0);
 		Eigen::Vector3d vhicle_pos(slam_start_x, slam_start_y, 0);
 		auto cell_utm = own_utm_rotation * cell_pos + vhicle_pos;
 		slam_loc = true;
         slam_loc_x    = cell_utm.x();
         slam_loc_y    = cell_utm.y();
-		// slam_loc_x = msg.salm_pose.pose.position.x;
-		// slam_loc_y = msg.salm_pose.pose.position.y;
+		// slam_loc_x = msg->salm_pose.pose.position.x;
+		// slam_loc_y = msg->salm_pose.pose.position.y;
 		slam_loc_yaw = yaw;
 		slam_loc_pitch = pitch;
 	}

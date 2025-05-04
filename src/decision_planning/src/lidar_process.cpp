@@ -1,6 +1,11 @@
 #include <memory>
 #include "rclcpp/rclcpp.hpp"
 #include "lidar_msgs/msg/objects.hpp"
+#include <vector>
+#include <string>
+#include <fstream>
+#include <iostream>
+using namespace std;
 
 using std::placeholders::_1;   // 占位符，便于绑定回调
 
@@ -25,7 +30,7 @@ private:
   {
     /* 下面演示打印 objects 数量。若要遍历，可根据自定义消息的字段修改
        例如：for (const auto & obj : msg->objects) { … }             */
-    RCLCPP_INFO(this->get_logger(), "接收到 %zu 个物体", msg->cells.size());
+    RCLCPP_INFO(this->get_logger(), "接收到 %zu 个物体", msg->objs.size());
   }
 
   rclcpp::Subscription<lidar_msgs::msg::Objects>::SharedPtr sub_;

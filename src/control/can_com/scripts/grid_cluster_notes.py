@@ -798,11 +798,11 @@ def timer_callback(event):
         arg.leftfront_v_lat_obj = top_x[0, 3]
         arg.leftfront_width = top_x[0, 4]
 
-        arg.RT1_L_LongObj = top_x[1, 0]
-        arg.RT1_L_LatObj = top_x[1, 1]
-        arg.RT1_V_LongObj = top_x[1, 2]
-        arg.RT1_V_LatObj = top_x[1, 3]
-        arg.RT1_Width = top_x[1, 4]
+        arg.rt1_l_long_obj = top_x[1, 0]
+        arg.rt1_l_lat_obj = top_x[1, 1]
+        arg.rt1_v_long_obj = top_x[1, 2]
+        arg.rt1_v_lat_obj = top_x[1, 3]
+        arg.rt1_width = top_x[1, 4]
 
         arg.rightfront_l_long_obj = top_x[2, 0]
         arg.rightfront_l_lat_obj = top_x[2, 1]

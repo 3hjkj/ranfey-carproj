@@ -161,7 +161,7 @@ void* route_plan(void* lp)
 	double weight_smooth=0.4;
 	double tolerance=0.05;
 	
-	vector<visualization_msgs::Marker> sloacl_path;
+	vector<visualization_msgs::msg::Marker> sloacl_path;
 	visualization_msgs::Marker sloacl_path_;
     geometry_msgs::Point wp;
 	vector<vector<double>> local_path_1;
@@ -332,7 +332,7 @@ void ReadTxt(string trace_path,vector<vector<double>>&paths)
 }
 void visiual_global_trace()
 {
-	vector<visualization_msgs::Marker> sloacl_path;
+	vector<visualization_msgs::msg::Marker> sloacl_path;
 	for(int ii=0;ii<paths.size()/3;ii++)
 	{
 	visualization_msgs::Marker sloacl_path_;

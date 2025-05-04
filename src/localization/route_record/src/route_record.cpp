@@ -58,7 +58,7 @@ int main(int argc,char** argv){
     	// ROS_INFO("Y_1.size() :[%d]",Y_1.size());
        ros::spinOnce();
     }
-	ofstream outfile("out.txt", ios::trunc);
+	ofstream outfile("out.txt", std::ios::out |ios::trunc);
 	outfile<<"real_T C_RoadTraj1Xtable_f32s23["<<X_.size()<<"]={";
 	for (int i = 0; i < X_.size(); i++)
 	{

@@ -3,16 +3,18 @@ import message_filters
 import rospy
 from sensor_msgs import point_cloud2
 from sensor_msgs.msg import PointCloud2
-#from numba import jit
+
+# from numba import jit
 import numpy as np
 from can_com.msg import autocontrolRadardata
 from can_com.msg import autocontrol
 from can_com.msg import getmap
 from multiprocessing import Pool
-#import pandas as pd
+
+# import pandas as pd
 import multiprocessing
-from multiprocessing import  Lock
-from multiprocessing import Manager,Queue
+from multiprocessing import Lock
+from multiprocessing import Manager, Queue
 from collections import Counter
 from multiprocessing import RawArray
 from math import pi
@@ -21,35 +23,32 @@ import ros_numpy
 
 global Data
 
-Data = RawArray('i',2700000)
+Data = RawArray("i", 2700000)
 
 global T
 
-T=np.array([[0.999988238126431,0.00485,0.00001,-0.010652],
-             [-0.00485,0.999988,-0.000000629942203510149,0.237046],
-             [-0.00001,0.000000629942203510149,1,0.0000437469717837757],
-             [0,0,0,1]])
+T = np.array(
+    [
+        [0.999988238126431, 0.00485, 0.00001, -0.010652],
+        [-0.00485, 0.999988, -0.000000629942203510149, 0.237046],
+        [-0.00001, 0.000000629942203510149, 1, 0.0000437469717837757],
+        [0, 0, 0, 1],
+    ]
+)
 
 global param
-param=np.mat([[0,0,0,0,0,0,0,0]])
+param = np.mat([[0, 0, 0, 0, 0, 0, 0, 0]])
 
-H = np.array([[1.0, 0, 0, 0],
-               [0, 1.0, 0, 0],
-               [0,0,1.0,0],
-               [0,0,0,1.0]])
+H = np.array([[1.0, 0, 0, 0], [0, 1.0, 0, 0], [0, 0, 1.0, 0], [0, 0, 0, 1.0]])
 
 
-lidar_R=np.array([[0.0225, 0, 0,0], 
-                     [0, 0.0225,0,0], 
-                     [0, 0,100,0],
-                     [0,0,0,100]])
+lidar_R = np.array(
+    [[0.0225, 0, 0, 0], [0, 0.0225, 0, 0], [0, 0, 100, 0], [0, 0, 0, 100]]
+)
 
-lidar_P=np.array([[1.0, 0, 0, 0],
-               [0, 1.0, 0, 0],
-               [0, 0, 100.0, 0], 
-               [0, 0, 0, 100.0]])
+lidar_P = np.array([[1.0, 0, 0, 0], [0, 1.0, 0, 0], [0, 0, 100.0, 0], [0, 0, 0, 100.0]])
 
-'''
+"""
 def get_map(arg):
     left_lane_dis=arg.left_lane_dis
     right_lane_dis=arg.right_lane_dis
@@ -488,9 +487,9 @@ def unique(c):
     idx=np.unique(x,return_index=True)[1]
     return c[idx]
 
-'''
+"""
 
-'''
+"""
 
 def get_x(x,delta,trans_mat,head_angle,vehicle_x,vehicle_y):
     left,right=1.4,1.4
@@ -648,18 +647,21 @@ def transfrom(points):
               (points[:,1]>=car_min_y)&(points[:,1]<= car_max_y)))[0],:]
     points[:,0]=points[:,0]-2.55
     return points
-'''
+"""
+
+
 def get_me(arg):
-    param=np.mat([[0,0,0,0,0,0,0,0]])
-    param[0,0]=arg.heading_delta_angle
-    param[0,1]=arg.v_obj_pointx2
-    param[0,2]=arg.v_obj_pointy2
-    param[0,3]=arg.v_obj_pointx1
-    param[0,4]=arg.v_obj_pointy1
-    param[0,5]=arg.vehicle_heading
-    param[0,6]=arg.vehicle_x
-    param[0,7]=arg.vehicle_y
-    return param#delta,right_x,right_y,left_x,left_y,head_angle,vehicle_x,vehicle_y
+    param = np.mat([[0, 0, 0, 0, 0, 0, 0, 0]])
+    param[0, 0] = arg.heading_delta_angle
+    param[0, 1] = arg.v_obj_pointx2
+    param[0, 2] = arg.v_obj_pointy2
+    param[0, 3] = arg.v_obj_pointx1
+    param[0, 4] = arg.v_obj_pointy1
+    param[0, 5] = arg.vehicle_heading
+    param[0, 6] = arg.vehicle_x
+    param[0, 7] = arg.vehicle_y
+    return param  # delta,right_x,right_y,left_x,left_y,head_angle,vehicle_x,vehicle_y
+
 
 def timer_callback(event):
     global x
@@ -674,210 +676,239 @@ def timer_callback(event):
     global frame
     global param
     global trans_mat
-    #print(Data[-2])
-    
+    # print(Data[-2])
+
     data = np.ctypeslib.as_array(Data)
-    if frame!=data[-2]:
-       print(1)
-       ti=rospy.get_time()
-       para=param
-       delta,right_x,right_y,left_x,left_y,head_angle,vehicle_x,vehicle_y=para[0,0],para[0,1],para[0,2],para[0,3],para[0,4],para[0,5],para[0,6],para[0,7]
-       now_point=np.mat([[left_x,left_y,right_x,right_y]])
-       trans_mat=np.concatenate((now_point,trans_mat),axis=0)
-       trans_mat=trans_mat[:20,:]
-       length=data[-1]
-       frame=data[-2]
-       #print(frame,count,length)
-       points=np.int16(data[:length].reshape(length/3,3))
-       
-       points=get_downsample(points,Cellsize=10)
-       usepoints=grid(points,Cell=50)
-    
-       if len(usepoints)>0:
-          result=np.asarray(grid_cluster(usepoints,ti))
-          
-          result=get_result(result)
-       else:
-          result=[]       
-       if len(x)==0:
-           if len(result)>0:
-              x,counterid,id_value,p_value=get_initialize(result,counterid,lidar_P,ti)
-           else:
-              x=[]
-           t=ti
-       else:
-           dt=ti-t
-           t=ti
-           F_m=updateF(F,dt)
-           Q=updateQ(Q,dt)
-           if len(result)>0:
-               match,useid=get_matched(x,result)
-               x,id_value,p_value,counterid=get_single_lidar(match,result,useid,id_value,p_value,counterid,F_m,Q,lidar_R,G,H,lidar_P)
-           else:
-               for i in range(len(x)):
-                   counterid.append(x[i,1])
-               x=[]
-               id_value=[]
-               p_value=[]
-       pub = rospy.Publisher('lidar_cluster',autocontrol,queue_size=1)
-       print(len(x))
-       
-       if len(x)>0:
-           #xx=x[np.where(x[:,10]>0)[0],:]
-           #if len(x)>0:
-           top_x,rt1=get_x(x,delta,trans_mat,head_angle,vehicle_x,vehicle_y)
-           top_x=np.array(top_x)
-               
-           #else:
-               #rt1=[]
-               #top_x=np.zeros((8,5))
-       else:
-           rt1=[]
-           top_x=np.zeros((8,5))
-       arg = autocontrol()
-       arg.leftfront_l_long_obj=top_x[0,0]
-       arg.leftfront_l_lat_obj=top_x[0,1]
-       arg.leftfront_v_long_obj=top_x[0,2]
-       arg.leftfront_v_lat_obj=top_x[0,3]
-       arg.leftfront_width=top_x[0,4]
-        
-       #arg.RT1_L_LongObj=top_x[1,0]
-       #arg.RT1_L_LatObj=top_x[1,1]
-       #arg.RT1_V_LongObj=top_x[1,2]
-       #arg.RT1_V_LatObj=top_x[1,3]
-       #arg.RT1_Width=top_x[1,4]
+    if frame != data[-2]:
+        print(1)
+        ti = rospy.get_time()
+        para = param
+        delta, right_x, right_y, left_x, left_y, head_angle, vehicle_x, vehicle_y = (
+            para[0, 0],
+            para[0, 1],
+            para[0, 2],
+            para[0, 3],
+            para[0, 4],
+            para[0, 5],
+            para[0, 6],
+            para[0, 7],
+        )
+        now_point = np.mat([[left_x, left_y, right_x, right_y]])
+        trans_mat = np.concatenate((now_point, trans_mat), axis=0)
+        trans_mat = trans_mat[:20, :]
+        length = data[-1]
+        frame = data[-2]
+        # print(frame,count,length)
+        points = np.int16(data[:length].reshape(length / 3, 3))
 
-       arg.front_l_long_obj=top_x[1,0]
-       arg.front_l_lat_obj=top_x[1,1]
-       arg.front_v_long_obj=top_x[1,2]
-       arg.front_v_lat_obj=top_x[1,3]
-       arg.front_width=top_x[1,4]
-        
-       arg.rightfront_l_long_obj=top_x[2,0]
-       arg.rightfront_l_lat_obj=top_x[2,1]
-       arg.rightfront_v_long_obj=top_x[2,2]
-       arg.rightfront_v_lat_obj=top_x[2,3]
-       arg.rightfront_width=top_x[2,4]
-       
-       arg.leftback_l_long_obj=top_x[3,0]
-       arg.leftback_l_lat_obj=top_x[3,1]
-       arg.leftback_v_long_obj=top_x[3,2]
-       arg.leftback_v_lat_obj=top_x[3,3]
-       arg.leftback_width=top_x[3,4]
-        
-       arg.back_l_long_obj=top_x[4,0]
-       arg.back_l_lat_obj=top_x[4,1]
-       arg.back_v_long_obj=top_x[4,2]
-       arg.back_v_lat_obj=top_x[4,3]
-       arg.back_width=top_x[4,4]
-        
-       arg.rightback_l_long_obj=top_x[5,0]
-       arg.rightback_l_lat_obj=top_x[5,1]
-       arg.rightback_v_long_obj=top_x[5,2]
-       arg.rightback_v_lat_obj=top_x[5,3]
-       arg.rightback_width=top_x[5,4]   
-       
-       arg.left_l_long_obj=top_x[6,0]
-       arg.left_l_lat_obj=top_x[6,1]
-       arg.left_v_long_obj=top_x[6,2]
-       arg.left_v_lat_obj=top_x[6,3]
-       arg.left_width=top_x[6,4]
-       
-       arg.right_l_long_obj=top_x[7,0]
-       arg.right_l_lat_obj=top_x[7,1]
-       arg.right_v_long_obj=top_x[7,2]
-       arg.right_v_lat_obj=top_x[7,3]
-       arg.right_width=top_x[7,4]
-       #print(top_x[7,0],top_x[7,1])
-       try:
-          print("left front:")
-          print(top_x[0,0],top_x[0,1],top_x[0,4])
-          print("front:")
-          print(top_x[1,0],top_x[1,1],top_x[1,4])
-          print("right front:")
-          print(top_x[2,0],top_x[2,1],top_x[2,4])
+        points = get_downsample(points, Cellsize=10)
+        usepoints = grid(points, Cell=50)
 
-       except:
-          print("!!!!!!!!!!!!!")
-       if len(rt1)>0:
-          #arg.front_l_long_obj=rt1[0,0]
-          #arg.front_l_lat_obj=rt1[0,1]
-          #arg.front_v_long_obj=rt1[0,2]
-          #arg.front_v_lat_obj=rt1[0,3]
-          #arg.front_width=rt1[0,4]
-          print("rt1:")
-          print(rt1[0,0],rt1[0,1]) 
-       pub.publish(arg)
-       #try:
-          #print(dt)
-       #except:
-          #print(ti)
-       t2=rospy.get_time()
-       
-       print(t2-ti)
-    
+        if len(usepoints) > 0:
+            result = np.asarray(grid_cluster(usepoints, ti))
 
-def callback(test,me):
+            result = get_result(result)
+        else:
+            result = []
+        if len(x) == 0:
+            if len(result) > 0:
+                x, counterid, id_value, p_value = get_initialize(
+                    result, counterid, lidar_P, ti
+                )
+            else:
+                x = []
+            t = ti
+        else:
+            dt = ti - t
+            t = ti
+            F_m = updateF(F, dt)
+            Q = updateQ(Q, dt)
+            if len(result) > 0:
+                match, useid = get_matched(x, result)
+                x, id_value, p_value, counterid = get_single_lidar(
+                    match,
+                    result,
+                    useid,
+                    id_value,
+                    p_value,
+                    counterid,
+                    F_m,
+                    Q,
+                    lidar_R,
+                    G,
+                    H,
+                    lidar_P,
+                )
+            else:
+                for i in range(len(x)):
+                    counterid.append(x[i, 1])
+                x = []
+                id_value = []
+                p_value = []
+        pub = rospy.Publisher("lidar_cluster", autocontrol, queue_size=1)
+        print(len(x))
+
+        if len(x) > 0:
+            # xx=x[np.where(x[:,10]>0)[0],:]
+            # if len(x)>0:
+            top_x, rt1 = get_x(x, delta, trans_mat, head_angle, vehicle_x, vehicle_y)
+            top_x = np.array(top_x)
+
+            # else:
+            # rt1=[]
+            # top_x=np.zeros((8,5))
+        else:
+            rt1 = []
+            top_x = np.zeros((8, 5))
+        arg = autocontrol()
+        arg.leftfront_l_long_obj = top_x[0, 0]
+        arg.leftfront_l_lat_obj = top_x[0, 1]
+        arg.leftfront_v_long_obj = top_x[0, 2]
+        arg.leftfront_v_lat_obj = top_x[0, 3]
+        arg.leftfront_width = top_x[0, 4]
+
+        # arg.RT1_L_LongObj=top_x[1,0]
+        # arg.rt1_l_lat_obj=top_x[1,1]
+        # arg.RT1_V_LongObj=top_x[1,2]
+        # arg.RT1_V_LatObj=top_x[1,3]
+        # arg.RT1_Width=top_x[1,4]
+
+        arg.front_l_long_obj = top_x[1, 0]
+        arg.front_l_lat_obj = top_x[1, 1]
+        arg.front_v_long_obj = top_x[1, 2]
+        arg.front_v_lat_obj = top_x[1, 3]
+        arg.front_width = top_x[1, 4]
+
+        arg.rightfront_l_long_obj = top_x[2, 0]
+        arg.rightfront_l_lat_obj = top_x[2, 1]
+        arg.rightfront_v_long_obj = top_x[2, 2]
+        arg.rightfront_v_lat_obj = top_x[2, 3]
+        arg.rightfront_width = top_x[2, 4]
+
+        arg.leftback_l_long_obj = top_x[3, 0]
+        arg.leftback_l_lat_obj = top_x[3, 1]
+        arg.leftback_v_long_obj = top_x[3, 2]
+        arg.leftback_v_lat_obj = top_x[3, 3]
+        arg.leftback_width = top_x[3, 4]
+
+        arg.back_l_long_obj = top_x[4, 0]
+        arg.back_l_lat_obj = top_x[4, 1]
+        arg.back_v_long_obj = top_x[4, 2]
+        arg.back_v_lat_obj = top_x[4, 3]
+        arg.back_width = top_x[4, 4]
+
+        arg.rightback_l_long_obj = top_x[5, 0]
+        arg.rightback_l_lat_obj = top_x[5, 1]
+        arg.rightback_v_long_obj = top_x[5, 2]
+        arg.rightback_v_lat_obj = top_x[5, 3]
+        arg.rightback_width = top_x[5, 4]
+
+        arg.left_l_long_obj = top_x[6, 0]
+        arg.left_l_lat_obj = top_x[6, 1]
+        arg.left_v_long_obj = top_x[6, 2]
+        arg.left_v_lat_obj = top_x[6, 3]
+        arg.left_width = top_x[6, 4]
+
+        arg.right_l_long_obj = top_x[7, 0]
+        arg.right_l_lat_obj = top_x[7, 1]
+        arg.right_v_long_obj = top_x[7, 2]
+        arg.right_v_lat_obj = top_x[7, 3]
+        arg.right_width = top_x[7, 4]
+        # print(top_x[7,0],top_x[7,1])
+        try:
+            print("left front:")
+            print(top_x[0, 0], top_x[0, 1], top_x[0, 4])
+            print("front:")
+            print(top_x[1, 0], top_x[1, 1], top_x[1, 4])
+            print("right front:")
+            print(top_x[2, 0], top_x[2, 1], top_x[2, 4])
+
+        except:
+            print("!!!!!!!!!!!!!")
+        if len(rt1) > 0:
+            # arg.front_l_long_obj=rt1[0,0]
+            # arg.front_l_lat_obj=rt1[0,1]
+            # arg.front_v_long_obj=rt1[0,2]
+            # arg.front_v_lat_obj=rt1[0,3]
+            # arg.front_width=rt1[0,4]
+            print("rt1:")
+            print(rt1[0, 0], rt1[0, 1])
+        pub.publish(arg)
+        # try:
+        # print(dt)
+        # except:
+        # print(ti)
+        t2 = rospy.get_time()
+
+        print(t2 - ti)
+
+
+def callback(test, me):
     print(1)
     global Data
     global T
     global param
-    pc =ros_numpy.numpify(test)
-    points_trans=pcl_points_rf(pc)
-    points_trans=get_cloud(points_trans)
-    points_trans=points_trans*100
-    points_trans=points_trans.astype(np.int32)
-    
-    length=len(points_trans)*3
-    lock=Lock()
+    pc = ros_numpy.numpify(test)
+    points_trans = pcl_points_rf(pc)
+    points_trans = get_cloud(points_trans)
+    points_trans = points_trans * 100
+    points_trans = points_trans.astype(np.int32)
+
+    length = len(points_trans) * 3
+    lock = Lock()
     lock.acquire()
-    param=get_me(me)
-    memoryview(Data)[:length]=points_trans.reshape(-1)
-    memoryview(Data)[-1]=np.array([length], np.int32)
-    memoryview(Data)[-2]=np.array([Data[-2]+1], np.int32)
-    #print(length,Data[-2])
-    lock.release()  
-    
-    
+    param = get_me(me)
+    memoryview(Data)[:length] = points_trans.reshape(-1)
+    memoryview(Data)[-1] = np.array([length], np.int32)
+    memoryview(Data)[-2] = np.array([Data[-2] + 1], np.int32)
+    # print(length,Data[-2])
+    lock.release()
+
+
 def main():
     global x
-    x=[]
+    x = []
     global counterid
-    counterid=[i for i in range(100)]
+    counterid = [i for i in range(100)]
     global id_value
-    id_value=[]
+    id_value = []
     global p_value
-    p_value=[]
+    p_value = []
     global t
-    t=0
+    t = 0
     global Q
-    Q = np.array(np.zeros([4,4]))
+    Q = np.array(np.zeros([4, 4]))
     global F
     F = np.array(np.eye(4))
     global G
-    G=np.array(np.eye(4))
+    G = np.array(np.eye(4))
     global result
-    result=[]
+    result = []
     global frame
-    frame=0
+    frame = 0
 
     global trans_mat
-    trans_mat=np.zeros([20,4])
+    trans_mat = np.zeros([20, 4])
     global param
-    rospy.init_node('pcl_listener', anonymous=True)
-    
-    test_sub=message_filters.Subscriber('/rfans_driver/rfans_points',PointCloud2,queue_size=1,buff_size=5240000)
-    
-    me=message_filters.Subscriber('/msg_RadarData',autocontrolRadardata,queue_size=1)
-    
-    subs = (test_sub,me)
-    ts = message_filters.ApproximateTimeSynchronizer(subs,1,0.05,allow_headerless=True)
+    rospy.init_node("pcl_listener", anonymous=True)
+
+    test_sub = message_filters.Subscriber(
+        "/rfans_driver/rfans_points", PointCloud2, queue_size=1, buff_size=5240000
+    )
+
+    me = message_filters.Subscriber(
+        "/msg_RadarData", autocontrolRadardata, queue_size=1
+    )
+
+    subs = (test_sub, me)
+    ts = message_filters.ApproximateTimeSynchronizer(
+        subs, 1, 0.05, allow_headerless=True
+    )
     ts.registerCallback(callback)
     rospy.Timer(rospy.Duration(0.05), timer_callback)
     rospy.spin()
-    
+
+
 if __name__ == "__main__":
-    
+
     main()
-
-

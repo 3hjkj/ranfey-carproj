@@ -18,6 +18,7 @@ find_package(localization_msgs REQUIRED)
 find_package(can_control_msgs  REQUIRED)
 find_package(lidar_msgs        REQUIRED)
 find_package(tf2 REQUIRED)
+find_package(radar_msgs REQUIRED)
 find_package(tf2_geometry_msgs REQUIRED)
 find_package(visualization_msgs REQUIRED)
 
@@ -34,7 +35,7 @@ add_executable(decision_planning
 ament_target_dependencies(decision_planning
   rclcpp geometry_msgs decision_planning_msgs
   localization_msgs can_control_msgs lidar_msgs
-  tf2 tf2_geometry_msgs visualization_msgs   
+  tf2 tf2_geometry_msgs visualization_msgs radar_msgs
 )
 
 add_executable(lidar_process

@@ -1,5 +1,6 @@
 #include"route.h"
 
+
 Local_route::Local_route( )
 {
 }
@@ -26,7 +27,7 @@ void Local_route::init_pub(const rclcpp::Node::SharedPtr & node)
   pub_local_right   = node->create_publisher<visualization_msgs::msg::Marker>(
       "/local_path_right", 10);
 }
-void Local_route:: ReadTxt(string trace_path,vector<vector<double>>&paths)
+void Local_route::ReadTxt(const std::string &trace_path, std::vector<std::vector<double>> &paths)
 {
 	vector<double> path;
     // 只适用于逗号分分隔
@@ -42,32 +43,34 @@ void Local_route:: ReadTxt(string trace_path,vector<vector<double>>&paths)
     }
     input.close();
 }
-void Local_route::split(string str, string pattern,vector<double>& result)
+void Local_route::split(const std::string &str, const std::string &pattern, std::vector<double> &result)
 {
+    std::string temp = str + pattern;  // 扩展后的字符串只作用于本函数
     string::size_type pos;
-    str += pattern;//扩展字符串以方便操作
-    int size = str.size();
+    int size = temp.size();
+
     for (int i = 0; i < size; i++)
     {
-        pos = str.find(pattern, i);
-        if (pos < size )
+        pos = temp.find(pattern, i);
+        if (pos < size)
         {
-			result.push_back(std::atof(str.substr(i, pos - i).c_str()));
+            result.push_back(std::atof(temp.substr(i, pos - i).c_str()));
             i = pos + pattern.size() - 1;
         }
     }
 }
-void Local_route::visiual_global_trace(vector<vector<double>>paths)
+
+void Local_route::visiual_global_trace(const std::vector<std::vector<double>> &paths)
 {
-	vector<visualization_msgs::Marker> sloacl_path;
+	vector<visualization_msgs::msg::Marker> sloacl_path;
 	for(int ii=0;ii<paths.size()/3;ii++)
 	{
-	visualization_msgs::Marker sloacl_path_;
-	geometry_msgs::Point wp;
+	visualization_msgs::msg::Marker sloacl_path_;
+	geometry_msgs::msg::Point wp;
 	sloacl_path_.header.frame_id = "/world";
 	sloacl_path_.header.stamp = node_->get_clock()->now();
 	sloacl_path_.ns = "";
-	sloacl_path_.action = visualization_msgs::Marker::ADD;
+	sloacl_path_.action = visualization_msgs::msg::Marker::ADD;
 	sloacl_path_.scale.x = 0.1;
 	sloacl_path_.frame_locked = false;
 	for(int i=0;i<paths[ii].size();i++)
@@ -77,7 +80,7 @@ void Local_route::visiual_global_trace(vector<vector<double>>paths)
 		wp.z=0;
 		sloacl_path_.points.push_back(wp);
 	}
-	sloacl_path_.type = visualization_msgs::Marker::LINE_STRIP;
+	sloacl_path_.type = visualization_msgs::msg::Marker::LINE_STRIP;
 	sloacl_path_.color.b = 1;
 	sloacl_path_.color.g = 1;
 	sloacl_path_.color.r = 1;
@@ -98,18 +101,18 @@ void Local_route::calculate_parameter()
 	double weight_smooth=0.4;
 	double tolerance=0.05;
 }
-void Local_route::route_plan(vector<vector<double>>paths,int trace_id,int local_point_id)
+void Local_route::route_plan(const std::vector<std::vector<double>> &paths,int trace_id,int local_point_id)
 {
-	// vector<visualization_msgs::Marker> sloacl_path;
-	// visualization_msgs::Marker sloacl_path_;
-    // geometry_msgs::Point wp;
+	// vector<visualization_msgs::msg::Marker> sloacl_path;
+	// visualization_msgs::msg::Marker sloacl_path_;
+    // geometry_msgs::msg::Point wp;
 	vector<vector<double>> local_path_1;
 	// for(int i=0;i<paths.size()/3;i++)
 	// {
 	// 	sloacl_path_.header.frame_id = "/world";
 	// 	sloacl_path_.header.stamp = ros::Time();
 	// 	sloacl_path_.ns = "";
-	// 	sloacl_path_.action = visualization_msgs::Marker::ADD;
+	// 	sloacl_path_.action = visualization_msgs::msg::Marker::ADD;
 	// 	sloacl_path_.frame_locked = false;
 	// 	sloacl_path_.scale.x = 0.3;
 	// 	sloacl_path_.frame_locked = false;
@@ -177,7 +180,7 @@ void Local_route::route_plan(vector<vector<double>>paths,int trace_id,int local_
 		// {
 		// 	if(ii==trace_id)
 		// 	{
-		// 		sloacl_path[ii].type = visualization_msgs::Marker::LINE_STRIP;
+		// 		sloacl_path[ii].type = visualization_msgs::msg::Marker::LINE_STRIP;
 		// 		sloacl_path[ii].color.b = 0;
 		// 		sloacl_path[ii].color.g = 0;
 		// 		sloacl_path[ii].color.r = 1;
@@ -185,7 +188,7 @@ void Local_route::route_plan(vector<vector<double>>paths,int trace_id,int local_
 		// 	}
 		// 	else 
 		// 	{
-		// 		sloacl_path[ii].type = visualization_msgs::Marker::LINE_STRIP;
+		// 		sloacl_path[ii].type = visualization_msgs::msg::Marker::LINE_STRIP;
 		// 		sloacl_path[ii].color.b = 0;
 		// 		sloacl_path[ii].color.g = 1;
 		// 		sloacl_path[ii].color.r = 0;
@@ -254,8 +257,15 @@ void Local_route::smoothPath(std::vector<vector<double>>& paths_dect, double wei
 		paths_dect[ix+1] = smoothPath_out[0+1];
 	}
 }
-bool Local_route::generator_local_trace(vector<double>x_orignal,vector<double>y_orignal,vector<double>yaw_orignal,vector<double>x_target,vector<double>y_target,
-vector<double>&local_x,vector<double>&local_y,vector<double> &local_yaw,int local_point_id)
+  bool Local_route::generator_local_trace(const std::vector<double> &x_orignal,
+                             const std::vector<double> &y_orignal,
+                             const std::vector<double> &yaw_orignal,
+                             const std::vector<double> &x_target,
+                             const std::vector<double> &y_target,
+                             std::vector<double> &local_x,
+                             std::vector<double> &local_y,
+                             std::vector<double> &local_yaw,
+                             int local_point_id)
 {
     //double yaw_change=azimuthAngle(x_orignal[local_point_id+keep_point],y_orignal[local_point_id+keep_point],
 	//x_target[local_point_id+keep_point+chang_lane_point],y_target[local_point_id+keep_point+chang_lane_point]);
@@ -332,8 +342,10 @@ vector<double>&local_x,vector<double>&local_y,vector<double> &local_yaw,int loca
 		return 0;
 	}
 }
-void Local_route::debug_show_road_cells(vector<can_control_msgs::msg::Autocontrol>& vec_at,lidar_msgs::msg::Cells cells_,
-int V_RefPoint,double yaw_vel,double x_vel,double y_vel)
+  void Local_route::debug_show_road_cells(std::vector<can_control_msgs::msg::Autocontrol> &vec_at,
+                             const lidar_msgs::msg::Cells &cells_,
+                             int V_RefPoint,
+                             double yaw_vel, double x_vel, double y_vel)
 {
 	// double yaw_vel;
 	// tf::Quaternion quat;
@@ -357,7 +369,7 @@ int V_RefPoint,double yaw_vel,double x_vel,double y_vel)
 		is_vaild_back=false;
 		for (int k = 0; k <  local_path[ix*3].size() ; k++)
 		{
-			geometry_msgs::Point wp;
+			geometry_msgs::msg::Point wp;
 			if(yaw_vel<0)
 			{
 				yaw_vel=yaw_vel+M_PI*2;
@@ -406,8 +418,8 @@ int V_RefPoint,double yaw_vel,double x_vel,double y_vel)
 						// }
 						// if(cell.x>0){
 							is_vaild_front = true;
-							at.RT1_L_LatObj = 0;
-							at.RT1_L_LongObj = cell.x;
+							at.rt1_l_lat_obj = 0;
+							at.rt1_l_long_obj= cell.x;
 							at.front_l_lat_obj = 0;
 							at.front_l_long_obj = cell.x;
 							break;
@@ -419,8 +431,8 @@ int V_RefPoint,double yaw_vel,double x_vel,double y_vel)
 		}
 		if (is_vaild_front ==false)
 		{
-			at.RT1_L_LatObj = 0;
-			at.RT1_L_LongObj = 0;
+			at.rt1_l_lat_obj = 0;
+			at.rt1_l_long_obj= 0;
 			at.front_l_lat_obj = 0;
 			at.front_l_long_obj = 0;
 		}

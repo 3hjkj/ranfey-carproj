@@ -504,7 +504,7 @@ private:
     }
     std::vector<std::vector<double>> path_left { X_left, Y_left };
 
-    std::ofstream outfile("global_trace.txt", std::ios::trunc);
+    std::ofstream outfile("global_trace.txt", std::ios::out | std::ios::trunc);
     auto dump_vec = [&outfile](const std::vector<double>& v) {
       for (size_t i = 0; i < v.size(); ++i) {
         outfile << v[i];

@@ -360,7 +360,7 @@ private:
       return;
     }
 
-    std::ofstream out("global_trace.txt", std::ios::trunc);
+    std::ofstream out("global_trace.txt",std::ios::out | std::ios::trunc);
     auto dump = [&out](const std::vector<double>& v) {
       for (size_t i = 0; i < v.size(); ++i) {
         out << v[i];
