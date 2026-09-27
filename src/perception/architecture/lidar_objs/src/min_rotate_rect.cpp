@@ -80,6 +80,14 @@ namespace perception
         }
 
         data_out = GetFinalShape(final_four_points);
+        // GetFinalShape 只吐 6 个量：x, y, length, width, height, heading。
+        // 其中 height = z_max − z_min（见 GetFourPoints：四个角点的 z 全被设成
+        // 这个差值），本身是对的。但调用方还需要目标在传感器坐标系下的 z 位置，
+        // 而那个量在这里被丢掉了 —— 于是调用方只能拿 height 顶替，造成
+        // rel_z 与 height 恒等。这里把 z 中心单独补上，作为第 7 个量（下标 6）。
+        // 用 z 中心而不是 z_min：与 grid_cluster.cpp 那条路的约定一致
+        // （rel_z = (zmax + zmin) / 2）。
+        data_out.emplace_back((final_points[7] + final_points[6]) / 2.0);
         counter++;
         return data_out;
     }
@@ -91,8 +99,18 @@ namespace perception
         double width = sqrt((data_in[0].x - data_in[1].x) * (data_in[0].x - data_in[1].x) +
                             (data_in[0].y - data_in[1].y) * (data_in[0].y - data_in[1].y));
         double height = data_in[0].z;
-        double x = (data_in[0].x + data_in[1].x) / 2;
-        double y = (data_in[0].y + data_in[2].y) / 2;
+        // 中心必须取**对角**连线的中点。
+        //
+        // 角点顺序（见 GetFourPoints）：0=(x_min,y_min) 1=(x_max,y_min)
+        //                              2=(x_min,y_max) 3=(x_max,y_max)
+        // 这四个点此刻已经被 RotateRect 转回传感器坐标系了。转回来之后，0/1 不再共 y、
+        // 0/2 不再共 x —— 原来的 (p0.x+p1.x)/2 和 (p0.y+p2.y)/2 只有在**旋转后的坐标
+        // 系**里才等于中心，在这里退化成两条边的中点，整个框中心因此偏掉
+        // (L/2)·sinθ（θ = 朝向+90°）。实测一帧：14 个框中心偏 0.02~5.81 m，远的直接
+        // 偏到旁边目标身上去了；框内点数占比只有 34%，改正后 100%。
+        // 注意 length/width 不受影响：|p0-p2|、|p0-p1| 是边长本身，旋转不变。
+        double x = (data_in[0].x + data_in[3].x) / 2;
+        double y = (data_in[0].y + data_in[3].y) / 2;
         double heading = atan2((data_in[0].y - data_in[2].y), (data_in[0].x - data_in[2].x) + EPS);
         data_out.emplace_back(x);
         data_out.emplace_back(y);

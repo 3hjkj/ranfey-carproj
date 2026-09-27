@@ -22,8 +22,16 @@ find_package(ament_cmake REQUIRED)
 # 第三方 / 系统库
 find_package(Eigen3 REQUIRED)
 find_package(OpenCV REQUIRED)
-find_package(PCL REQUIRED COMPONENTS common io filters)
+# octree 是 PMF 的硬依赖：pcl::applyMorphologicalOperator 在本编译单元里实例化
+# OctreePointCloudSearch，现代 ld 默认 --no-copy-dt-needed-entries，libpcl_filters.so
+# 自己的依赖不满足我们的 .o，不显式列会链接期报未定义符号。
+# kdtree：dbscan.cpp 的 CheckNearPoints 用 KdTreeFLANN 取代原来的 O(n²) 双循环
+# （2058 点 10.5 ms → 19446 点 928 ms，严格二次）。libpcl_kdtree 本来已随
+# segmentation→features 传递链上，这里显式列出，免得将来有人精简组件时把它剪掉。
+find_package(PCL REQUIRED COMPONENTS common io filters octree segmentation kdtree)
 find_package(Qhull REQUIRED COMPONENTS qhull_r)
+# jsoncpp：third_libs 内为 aarch64 预编译（EM 183），x86_64 本机改用系统库
+find_library(JSONCPP_LIBRARY jsoncpp REQUIRED)
 
 # ROS 2 接口库
 find_package(rclcpp          REQUIRED)
@@ -37,6 +45,7 @@ find_package(Qhull      REQUIRED COMPONENTS qhull_r)
 find_package(can_control_msgs REQUIRED)
 find_package(pcl_msgs        REQUIRED)
 find_package(lidar_msgs      REQUIRED)
+find_package(radar_msgs      REQUIRED)
 find_package(spdlog REQUIRED)
 
 
@@ -45,13 +54,8 @@ find_package(spdlog REQUIRED)
 ###############################################################################
 set(lib_path ${PROJECT_SOURCE_DIR}/third_libs)
 
-file(GLOB json_static   ${lib_path}/json/*.a)
-file(GLOB json_shared   ${lib_path}/json/*.so*)
-
 set(third_party_libs
-
-  ${json_static}
-  ${json_shared}
+  ${JSONCPP_LIBRARY}
 )
 
 ###############################################################################
@@ -84,7 +88,13 @@ set(SRC_FILES
   architecture/lidar_objs/src/grid_cluster.cpp
   architecture/lidar_objs/src/lidar_cluster.cpp
   architecture/lidar_objs/src/dbscan.cpp
+  architecture/lidar_objs/src/wall_extract.cpp
   architecture/lidar_objs/src/min_rotate_rect.cpp
+  architecture/fusion/src/fusion_node.cpp
+  architecture/fusion/src/data_association.cpp
+  architecture/fusion/src/tracker.cpp
+  architecture/fusion/src/objects2cells.cpp
+  architecture/fusion/src/camera_projection.cpp
 )
 
 ###############################################################################
@@ -98,6 +108,9 @@ if(TARGET PCL::common)
     PCL::common
     PCL::io
     PCL::filters
+    PCL::octree
+    PCL::segmentation
+    PCL::kdtree
     ${third_party_libs}
     ${OpenCV_LIBRARIES}
     proj     
@@ -123,6 +136,7 @@ ament_target_dependencies(perception
   pcl_conversions
   pcl_msgs
   lidar_msgs
+  radar_msgs
   OpenCV
   localization_msgs
   pcl_ros
@@ -140,7 +154,14 @@ install(TARGETS perception
 )
 
 install(DIRECTORY launch
-  DESTINATION share/${PROJECT_NAME}) 
+  DESTINATION share/${PROJECT_NAME})
+
+install(DIRECTORY config
+  DESTINATION share/${PROJECT_NAME})
+
+# 相机粗标定与既有栅格/聚类配置
+install(DIRECTORY config_json
+  DESTINATION share/${PROJECT_NAME})
 
 # 如果还想装头文件可按需开启
 # install(DIRECTORY common/include/ DESTINATION include)

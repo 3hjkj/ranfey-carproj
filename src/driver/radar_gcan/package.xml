@@ -1,0 +1,25 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>radar_gcan</name>
+  <version>0.0.0</version>
+  <description>毫米波雷达驱动：广成 GCAN-202 以太网-CAN 转换机 -> radar_msgs/SensorData</description>
+
+  <maintainer email="176980246@qq.com">wei</maintainer>
+  <license>MIT</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <!-- 纯 Python 节点，全部是运行期依赖 -->
+  <exec_depend>rclpy</exec_depend>
+  <exec_depend>radar_msgs</exec_depend>
+  <exec_depend>std_msgs</exec_depend>
+
+  <test_depend>ament_copyright</test_depend>
+  <test_depend>ament_flake8</test_depend>
+  <test_depend>ament_pep257</test_depend>
+  <test_depend>python3-pytest</test_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

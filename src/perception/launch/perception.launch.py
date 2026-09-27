@@ -33,6 +33,11 @@ def generate_launch_description() -> LaunchDescription:
         "lidar_topic_name2": "/ns3/points_raw",
         "lidar_topic_name3": "/ns4/points_raw",
         "lidar_topic_name4": "/ns5/points_raw",
+        # ---- 三传感器融合 ----
+        "fusion_enable": False,              # 开启后 /perception/lidar_cells 改为发融合栅格
+        "radar_topic": "/sensorRawData",     # 毫米波雷达目标（radar_adapter 发布）
+        "yolo_topic": "/perception/yolo_boxes",  # YOLO 检测框
+        "camera_config": os.path.join(cfg_dir, "camera.json"),  # 相机粗标定
     }
 
     #

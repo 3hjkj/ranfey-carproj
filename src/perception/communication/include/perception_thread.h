@@ -4,6 +4,7 @@
 #include "communication/include/rosbridge.h"
 #include "architecture/lidar_cells/include/lidar_cell.h"
 #include "architecture/lidar_objs/include/grid_cluster.h"
+#include "architecture/fusion/include/fusion_node.h"
 
 #include "common/threadpool.h"
 #include "common/log.h"
@@ -41,6 +42,7 @@ private:
   /* ============ 感知流水线 ============ */
   std::shared_ptr<lidar_cells::LidarCell>   lidar_cell_;
   std::shared_ptr<lidar_objs::LidarCluster> lidar_cluster_;
+  std::shared_ptr<fusion::FusionNode>       fusion_;
 
   /* ============ 线程池 ============ */
   static constexpr unsigned THREAD_NUM  = 5;
@@ -52,6 +54,7 @@ private:
 
   /* ============ 内部执行函数 ============ */
   void runOnce();             //!< 每帧 / 每周期执行一次
+  void RunLoop();             //!< 流水线主循环（后台线程执行；回调由 main 线程 spin 独占处理）
 };
 
 } // namespace perception

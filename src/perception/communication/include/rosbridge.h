@@ -9,6 +9,8 @@
 #include <sensor_msgs/msg/point_cloud2.hpp>
 #include <lidar_msgs/msg/cells.hpp>
 #include <lidar_msgs/msg/objects.hpp>
+#include <lidar_msgs/msg/vision_boxes.hpp>
+#include <radar_msgs/msg/sensor_data.hpp>
 #include <localization_msgs/msg/localization.hpp>
 #include "common/data_pool.h"
 #include "common/log.h"
@@ -36,6 +38,8 @@ private:
   void cbObj (const sensor_msgs::msg::PointCloud2::ConstSharedPtr & msg, int idx);
   void cbCell(const sensor_msgs::msg::PointCloud2::ConstSharedPtr & msg, int idx);
   void cbLocalization(const localization_msgs::msg::Localization::ConstSharedPtr & msg);
+  void cbRadar(const radar_msgs::msg::SensorData::ConstSharedPtr & msg);
+  void cbYolo (const lidar_msgs::msg::VisionBoxes::ConstSharedPtr & msg);
 
   /* ---------- ROS 对象 ---------- */
   rclcpp::Node::SharedPtr node_;
@@ -44,9 +48,17 @@ private:
   std::array<rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr,5> sub_objs_;
   std::array<rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr,5> sub_cells_;
 
+  rclcpp::Subscription<radar_msgs::msg::SensorData>::SharedPtr  sub_radar_;
+  rclcpp::Subscription<lidar_msgs::msg::VisionBoxes>::SharedPtr sub_yolo_;
+
   rclcpp::Publisher<lidar_msgs::msg::Cells>::SharedPtr   pub_cells_;
   rclcpp::Publisher<lidar_msgs::msg::Objects>::SharedPtr pub_objs_;
   rclcpp::Publisher<lidar_msgs::msg::Objects>::SharedPtr pub_fusion_;
+
+  /* ============ 融合使能 & 源话题（参数） ============ */
+  bool fusion_enable_ = false;
+  std::string radar_topic_;
+  std::string yolo_topic_;
 };
 
 } // namespace perception

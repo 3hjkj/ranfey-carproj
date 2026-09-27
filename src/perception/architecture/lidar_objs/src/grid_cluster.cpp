@@ -40,7 +40,18 @@ namespace perception
             return -1;
         }
 
-        /* ---------- 4. 子模块初始化 ---------- */
+        /* ---------- 4. 把聚类门槛交给 PointsCluster ----------
+           lidar_cluster_ 在第 22 行就构造了，那时配置还没读，所以只能在这里补。
+           不调也能跑：PointsCluster 的成员默认值与旧字面量一致。 */
+        lidar_cluster_->Configure(objs_config_);
+
+        /* ---------- 4b. 把同一份配置交给预处理 ----------
+           lidar_preprocess 在第 21 行构造，那时还没读配置，所以在这里补。
+           它只读其中的 ground_* / pmf_* / cluster_voxel_size /
+           ror_stage1_min_neighbors；ROI 与车体框仍走 preprocess.json。 */
+        lidar_preprocess->Configure(objs_config_);
+
+        /* ---------- 5. 子模块初始化 ---------- */
         lidar_preprocess->Init();
         return 0;
         }
@@ -56,36 +67,60 @@ namespace perception
         pcl::PointCloud<pcl::PointXYZ>::Ptr clouds_filter_v(new pcl::PointCloud<pcl::PointXYZ>);
         pcl::PointCloud<pcl::PointXYZ>::Ptr clouds_no_ground(new pcl::PointCloud<pcl::PointXYZ>);
         pcl::PointCloud<pcl::PointXYZ>::Ptr clouds_ground(new pcl::PointCloud<pcl::PointXYZ>);
-        pcl::PointCloud<pcl::PointXYZ>::Ptr clouds_no_ground_all(new pcl::PointCloud<pcl::PointXYZ>);
         pcl::PointCloud<pcl::PointXYZ>::Ptr clouds(new pcl::PointCloud<pcl::PointXYZ>);
 
-        /* ---------- A. 逐雷达预处理 ---------- */
-        for (auto& pair : lidar_points.point_cloud_ptr_map)
+        /* ---------- A. 合并 + 细体素 ----------
+           一次调用吃掉整个 point_cloud_ptr_map（VoxelFilter 的
+           LidarDataInType 重载本来就遍历全表），比原来逐雷达循环更简单。
+           用**细**体素：地面分割要看到真正被采样到的地面曲面。地面点分完就丢，
+           所以细体素不会拖慢后面的 DBSCAN。 */
+        float gvox = objs_config_.ground_voxel_size;
+        lidar_preprocess->VoxelFilter(lidar_points, clouds_filter_v, gvox);
+
+        /* ---------- A2. 离群点去除（在分地面之前）----------
+           地板下方或空间中孤立的杂点会把 PMF 的形态学开运算局部拉低，导致
+           周围真实地面被误判为非地面。放在地面分割**之前**是这个滤波器唯一
+           有真实机制的位置。 */
+        lidar_preprocess->RadiusFilter(clouds_filter_v, clouds_filter_r,
+                                       objs_config_.radius_search,
+                                       objs_config_.ror_stage1_min_neighbors);
+
+        /* ---------- B. 地面分割（方法可切，便于 A/B 归因）---------- */
+        const size_t n_fine = clouds_filter_r->points.size();
+        int ground_rc = 0;
+        if (objs_config_.ground_method == 2)
         {
-            if (pair.second->empty()) continue;
-
-            lidar_preprocess->VoxelFilter (pair.second,  clouds_filter_v, objs_config_.voxel_size);
-            lidar_preprocess->RadiusFilter(clouds_filter_v, clouds_filter_r,
-                                        objs_config_.radius_search, objs_config_.search_num);
-            lidar_preprocess->GroundPoints(clouds_filter_r, clouds_ground, clouds_no_ground,
-                                        objs_config_.threshold_h, objs_config_.points_num);
-
-            for (auto& p : clouds_no_ground->points)
-            if (!std::isnan(p.x) && !std::isnan(p.y) && !std::isnan(p.z))
-                clouds_no_ground_all->points.emplace_back(p);
+            ground_rc = lidar_preprocess->GroundSegmentationPMF(
+                clouds_filter_r, clouds_ground, clouds_no_ground);
+        }
+        else
+        {
+            ground_rc = lidar_preprocess->GroundPoints(
+                clouds_filter_r, clouds_ground, clouds_no_ground,
+                objs_config_.threshold_h, objs_config_.points_num);
         }
 
-        /* ---------- B. 如果没有地面外点则返回 ---------- */
-        if (clouds_no_ground_all->points.empty())
+        /* PMF 失败/选出的地面少到不可信 → 这一帧不发目标。
+           **不回退到旧法**：静默回退会让 A/B 数据无法归因。 */
+        if (objs_config_.ground_method == 2 &&
+            (ground_rc != 0 ||
+             clouds_ground->points.size() < objs_config_.pmf_min_ground_ratio * n_fine))
+        {
+            ERROR("pmf ground unusable (rc=%d, in=%zu, ground=%zu), skip frame",
+                  ground_rc, n_fine, clouds_ground->points.size());
+            return 1;
+        }
+
+        if (clouds_no_ground->points.empty())
         {
             ERROR("no noground points");
             return 1;
         }
 
-        /* ---------- C. 二次体素、半径滤波，加速聚类 ---------- */
+        /* ---------- C. 粗体素 + 半径滤波，加速聚类 ---------- */
         clouds_filter_v->points.clear();
-        float voxel_size = 0.3f;
-        lidar_preprocess->VoxelFilter(clouds_no_ground_all, clouds_filter_v, voxel_size);
+        float voxel_size = objs_config_.cluster_voxel_size;
+        lidar_preprocess->VoxelFilter(clouds_no_ground, clouds_filter_v, voxel_size);
         lidar_preprocess->RadiusFilter(clouds_filter_v, clouds,
                                         objs_config_.radius_search, objs_config_.search_num);
 
@@ -337,6 +372,47 @@ namespace perception
                 conf.radius_search = value["radius_search"].asFloat();
                 conf.search_num = value["search_num"].asInt();
                 conf.threshold_h = value["threshold_h"].asFloat();
+
+                /* 聚类门槛。**必须用 isMember 包一层**：上面那批键是老 json
+                   里就有的，而 JsonCpp 对不存在的键返回 null Value，
+                   asFloat()/asInt() 会给 0 —— 直接照抄写法会把"缺键"变成
+                   "阈值=0"，比报错还难查。这里缺键就保留结构体里的默认值。 */
+                if (value.isMember("dbscan_eps"))         conf.dbscan_eps = value["dbscan_eps"].asDouble();
+                if (value.isMember("dbscan_min_pts"))     conf.dbscan_min_pts = value["dbscan_min_pts"].asInt();
+                if (value.isMember("min_cluster_points")) conf.min_cluster_points = value["min_cluster_points"].asInt();
+                if (value.isMember("min_obj_height"))     conf.min_obj_height = value["min_obj_height"].asDouble();
+                if (value.isMember("min_pts_near"))       conf.min_pts_near = value["min_pts_near"].asInt();
+                if (value.isMember("min_pts_rmax"))       conf.min_pts_rmax = value["min_pts_rmax"].asDouble();
+                if (value.isMember("wall_size_m"))        conf.wall_size_m = value["wall_size_m"].asDouble();
+                if (value.isMember("split_eps"))          conf.split_eps = value["split_eps"].asDouble();
+                if (value.isMember("split_size_m"))       conf.split_size_m = value["split_size_m"].asDouble();
+
+                /* 摘墙（wall_extract.h）。缺 wall_extract 键时 asBool() 会给 false——
+                   那等于**静默关掉摘墙**，是这组键里最阴的一个：日志里仍然一切正常，
+                   只是聚类退化成老行为。所以每次真机 A/B 都要看 Configure 打的
+                   "wall cfg: enable=..." 那行。 */
+                if (value.isMember("wall_extract"))          conf.wall_extract = value["wall_extract"].asBool();
+                if (value.isMember("wall_seg_eps_ratio"))    conf.wall_seg_eps_ratio = value["wall_seg_eps_ratio"].asDouble();
+                if (value.isMember("wall_seg_min_pts"))      conf.wall_seg_min_pts = value["wall_seg_min_pts"].asInt();
+                if (value.isMember("wall_min_points"))       conf.wall_min_points = value["wall_min_points"].asInt();
+                if (value.isMember("wall_min_zspan"))        conf.wall_min_zspan = value["wall_min_zspan"].asDouble();
+                if (value.isMember("wall_max_thin"))         conf.wall_max_thin = value["wall_max_thin"].asDouble();
+                if (value.isMember("wall_min_span"))         conf.wall_min_span = value["wall_min_span"].asDouble();
+
+                /* 地面分割与体素分辨率。同样用 isMember：缺 ground_method 会变成 0，
+                   而 1/2 两个分支都不匹配 0，会静默走错。 */
+                if (value.isMember("ground_method"))      conf.ground_method = value["ground_method"].asInt();
+                if (value.isMember("ground_voxel_size"))  conf.ground_voxel_size = value["ground_voxel_size"].asFloat();
+                if (value.isMember("cluster_voxel_size")) conf.cluster_voxel_size = value["cluster_voxel_size"].asFloat();
+                if (value.isMember("pmf_max_window"))     conf.pmf_max_window = value["pmf_max_window"].asInt();
+                if (value.isMember("pmf_slope"))          conf.pmf_slope = value["pmf_slope"].asFloat();
+                if (value.isMember("pmf_initial_dist"))   conf.pmf_initial_dist = value["pmf_initial_dist"].asFloat();
+                if (value.isMember("pmf_max_dist"))       conf.pmf_max_dist = value["pmf_max_dist"].asFloat();
+                if (value.isMember("pmf_cell_size"))      conf.pmf_cell_size = value["pmf_cell_size"].asFloat();
+                if (value.isMember("pmf_base"))           conf.pmf_base = value["pmf_base"].asFloat();
+                if (value.isMember("pmf_exponential"))    conf.pmf_exponential = value["pmf_exponential"].asBool();
+                if (value.isMember("pmf_min_ground_ratio")) conf.pmf_min_ground_ratio = value["pmf_min_ground_ratio"].asFloat();
+                if (value.isMember("ror_stage1_min_neighbors")) conf.ror_stage1_min_neighbors = value["ror_stage1_min_neighbors"].asInt();
             }
             in.close();
             return true;

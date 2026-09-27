@@ -7,6 +7,7 @@ find_package(sensor_msgs REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(cv_bridge REQUIRED)
 find_package(image_transport REQUIRED)
+find_package(lidar_msgs REQUIRED)
 
 # 安装 Python 脚本
 install(PROGRAMS

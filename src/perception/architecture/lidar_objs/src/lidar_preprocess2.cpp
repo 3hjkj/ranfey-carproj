@@ -16,7 +16,9 @@ namespace perception
         INFO("LidarPreprocess2 Init");
 
         /* 调试发布器 */
-        debug_ = node_->declare_parameter<bool>("debug_pre", false);
+        if (!node_->has_parameter("debug_pre"))
+            node_->declare_parameter<bool>("debug_pre", false);
+        node_->get_parameter("debug_pre", debug_);
         if (debug_) {
             pub_lidar_voxel      = node_->create_publisher<sensor_msgs::msg::PointCloud2>("/perception/lidar_voxel",       10);
             pub_lidar_radius     = node_->create_publisher<sensor_msgs::msg::PointCloud2>("/perception/lidar_radius",      10);
@@ -25,8 +27,11 @@ namespace perception
         }
 
         /* 读取参数 */
-        std::string cfg_path = node_->declare_parameter<std::string>(
-            "preprocess_config", "config_json/preprocess.json");
+        std::string cfg_path;
+        if (!node_->has_parameter("preprocess_config"))
+            node_->declare_parameter<std::string>(
+                "preprocess_config", "config_json/preprocess.json");
+        node_->get_parameter("preprocess_config", cfg_path);
         ReadCellConfigJson(cfg_path, proprecess_config_);
 
         row = static_cast<int>((proprecess_config_.xmax - proprecess_config_.xmin) /
@@ -35,6 +40,24 @@ namespace perception
                                 proprecess_config_.cell_size_y);
         return 0;
         }
+
+        void LidarPreprocess2::Configure(const objs_config &cfg)
+        {
+            objs_config_ = cfg;
+            /* 只读 ground_* / pmf_* / cluster_voxel_size / ror_stage1_min_neighbors。
+               不要在这里读 xmin/xmax/car_x_xxx/cell_size_xxx——ROI 与车体框的门限走
+               proprecess_config_（preprocess.json），见成员声明处的注释。 */
+            INFO("preprocess cfg: ground_method={} ground_voxel={} cluster_voxel={} "
+                 "pmf(cell={} win={} slope={} init={} max={} base={} exp={}) "
+                 "min_ground_ratio={} ror_stage1={}",
+                 objs_config_.ground_method, objs_config_.ground_voxel_size,
+                 objs_config_.cluster_voxel_size, objs_config_.pmf_cell_size,
+                 objs_config_.pmf_max_window, objs_config_.pmf_slope,
+                 objs_config_.pmf_initial_dist, objs_config_.pmf_max_dist,
+                 objs_config_.pmf_base, objs_config_.pmf_exponential,
+                 objs_config_.pmf_min_ground_ratio, objs_config_.ror_stage1_min_neighbors);
+        }
+
         // int LidarPreprocess2::VoxelFilter(const LidarDataInType &lidar_points, pcl::PointCloud<pcl::PointXYZI>::Ptr &data_out,
         //                                  float &voxel_size)
         // {
@@ -204,7 +227,9 @@ namespace perception
                 sor.setLeafSize(voxel_size, voxel_size, voxel_size);
                 sor.setInputCloud(data_in_tmp);
                 // DeleteNanPoints(clouds2, clouds3);
-                std::cout << "data_in_tmp:" << data_in_tmp->points.size() << "\n";
+                /* 这行原来是 std::cout，10 Hz 下会把控制台刷爆。改成限流日志。 */
+                RCLCPP_DEBUG_STREAM_THROTTLE(node_->get_logger(), *node_->get_clock(), 2000,
+                    "voxel(lidar map): in=" << data_in_tmp->points.size());
                 sor.filter(clouds3);
                 data_out = clouds3.makeShared();
             }
@@ -264,7 +289,8 @@ namespace perception
             // 1.2 voxel filter
             // LOG(INFO) << "voxel_size:" << voxel_size;
             // LOG(INFO) << "clouds:" << clouds->points.size();
-            std::cout << "clouds size:" << clouds->points.size() << "\n";
+            RCLCPP_DEBUG_STREAM_THROTTLE(node_->get_logger(), *node_->get_clock(), 2000,
+                "voxel(cloud): in=" << clouds->points.size());
             static pcl::VoxelGrid<pcl::PointXYZ> sor;
             sor.setLeafSize(voxel_size, voxel_size, voxel_size);
             sor.setInputCloud(clouds);
@@ -316,6 +342,108 @@ namespace perception
                 pub_ground_points->publish(output_groud_points);
                 pub_no_ground_points->publish(output_no_groud_points);
             }
+            return 0;
+        }
+        int LidarPreprocess2::GroundSegmentationPMF(const pcl::PointCloud<pcl::PointXYZ>::Ptr &data_in,
+                                                    pcl::PointCloud<pcl::PointXYZ>::Ptr &ground_points,
+                                                    pcl::PointCloud<pcl::PointXYZ>::Ptr &no_ground_points)
+        {
+            /* 两堆都要先清空：调用方复用同一批 Ptr，残留会把上一帧的点混进来。 */
+            ground_points->points.clear();
+            no_ground_points->points.clear();
+            ground_points->width = ground_points->height = 0;
+            no_ground_points->width = no_ground_points->height = 0;
+
+            if (!data_in || data_in->points.empty())
+            {
+                return 1;
+            }
+
+            /* 去 NaN。PMF 内部用点坐标建 XY 包围盒再做 getMinMax3D，NaN 会污染结果。 */
+            pcl::PointCloud<pcl::PointXYZ>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZ>);
+            DeleteNanPoints(data_in, cloud);
+            if (cloud->points.empty())
+            {
+                return 1;
+            }
+
+            /* PMF 至少要能撑起一次开运算，点太少直接判失败——比返回一堆
+               垃圾分类强，调用方（grid_cluster.cpp）会据此跳过这一帧。 */
+            if (cloud->points.size() < 4)
+            {
+                return 1;
+            }
+
+            pcl::PointIndices ground_idx;
+            try
+            {
+                pcl::ProgressiveMorphologicalFilter<pcl::PointXYZ> pmf;
+                pmf.setInputCloud(cloud);
+                /* max_window 单位是米（PCL 内部把窗口按 cell_size 乘出来再和它比），
+                   虽然 setter 收 int。窗口是**软上限**：循环条件 window < max_window，
+                   所以 cell 0.5 / max_window 6 实际跑 [1.5, 2.5, 4.5, 8.5] 四轮，
+                   最后一轮超出配置值。 */
+                pmf.setMaxWindowSize(objs_config_.pmf_max_window);
+                pmf.setSlope(objs_config_.pmf_slope);
+                pmf.setInitialDistance(objs_config_.pmf_initial_dist);
+                pmf.setMaxDistance(objs_config_.pmf_max_dist);
+                pmf.setCellSize(objs_config_.pmf_cell_size);
+                pmf.setBase(objs_config_.pmf_base);
+                pmf.setExponential(objs_config_.pmf_exponential);
+                pmf.extract(ground_idx.indices);
+            }
+            catch (const std::exception &e)
+            {
+                /* initCompute() 失败时 extract() 提前返回**空**地面点集。
+                   这里必须显式判失败，否则下面会把整个输入（含地板）当非地面
+                   喂给 DBSCAN —— 那正是这一轮要修的失败模式。 */
+                ERROR("pmf extract failed: %s", e.what());
+                return 1;
+            }
+
+            if (ground_idx.indices.empty())
+            {
+                ERROR("pmf returned empty ground (in=%zu)", cloud->points.size());
+                return 1;
+            }
+
+            /* 按位图分堆，保证 ground ∪ no_ground == 输入且互斥。旧法用两个
+               独立的 push 分支，容易出现某个点两边都没进（被静默吞掉）。 */
+            std::vector<char> is_ground(cloud->points.size(), 0);
+            for (int i : ground_idx.indices)
+            {
+                if (i >= 0 && static_cast<size_t>(i) < is_ground.size())
+                    is_ground[i] = 1;
+            }
+            for (size_t i = 0; i < cloud->points.size(); ++i)
+            {
+                if (is_ground[i])
+                    ground_points->points.emplace_back(cloud->points[i]);
+                else
+                    no_ground_points->points.emplace_back(cloud->points[i]);
+            }
+            ground_points->width    = ground_points->points.size();
+            ground_points->height   = 1;
+            no_ground_points->width = no_ground_points->points.size();
+            no_ground_points->height = 1;
+
+            if (debug_)
+            {
+                sensor_msgs::msg::PointCloud2 output_groud_points;
+                sensor_msgs::msg::PointCloud2 output_no_groud_points;
+                pcl::toROSMsg(*ground_points, output_groud_points);
+                pcl::toROSMsg(*no_ground_points, output_no_groud_points);
+                output_groud_points.header.frame_id = "world";
+                output_no_groud_points.header.frame_id = "world";
+                pub_ground_points->publish(output_groud_points);
+                pub_no_ground_points->publish(output_no_groud_points);
+            }
+
+            RCLCPP_DEBUG_STREAM_THROTTLE(node_->get_logger(), *node_->get_clock(), 2000,
+                "pmf ground: in=" << cloud->points.size()
+                << " ground=" << ground_points->points.size()
+                << " (" << std::fixed << std::setprecision(1)
+                << (100.0 * ground_points->points.size() / cloud->points.size()) << "%)");
             return 0;
         }
         int LidarPreprocess2::GetGridZmin(const pcl::PointCloud<pcl::PointXYZ>::Ptr &data_in,
@@ -450,7 +578,25 @@ namespace perception
                                            float &radius_search,
                                            int &search_num)
         {
-            // LOG(INFO) << "radius filter size:" << data_in->points.size();
+            data_out->points.clear();
+            data_out->width = data_out->height = 0;
+
+            /* 极小云陷阱：RadiusOutlierRemoval 对每个点做 k 近邻查询，点数不足
+               search_num 时 k != mean_k，于是**每个点都被删**——3 个点的云配
+               search_num=5 会被清成空。这里直接原样返回，别让滤波器吃掉它。 */
+            if (!data_in || static_cast<int>(data_in->points.size()) <= search_num)
+            {
+                if (data_in)
+                    for (const auto &p : data_in->points)
+                        if (!std::isnan(p.x) && !std::isnan(p.y) && !std::isnan(p.z))
+                            data_out->points.emplace_back(p);
+                data_out->width  = data_out->points.size();
+                data_out->height = 1;
+                RCLCPP_DEBUG_STREAM_THROTTLE(node_->get_logger(), *node_->get_clock(), 2000,
+                    "radius filter skipped (too few points): " << (data_in ? data_in->points.size() : 0));
+                return 0;
+            }
+
             try
             {
 
@@ -462,7 +608,11 @@ namespace perception
                 pcl::RadiusOutlierRemoval<pcl::PointXYZ> outrem;
                 outrem.setInputCloud(data_in_tmp);
                 outrem.setRadiusSearch(radius_search);      // 搜索半径
-                outrem.setMinNeighborsInRadius(search_num); // 搜索 最少点数
+                /* ⚠ PCL 把**查询点自己**算进邻居数（radius_outlier_removal.hpp:142），
+                   所以 search_num=N 的真实语义是"半径内至少 N 个**别的**点"，
+                   不是 N-1。实测本场景 19228 个原始点里 0.5 m 内少于 1 个邻居的
+                   有 0 个——N=1 时这个滤波器可证明是空操作。 */
+                outrem.setMinNeighborsInRadius(search_num); // 搜索 最少点数(含自己)
                 // apply filter
                 //
                 outrem.filter(data_out_tmp);

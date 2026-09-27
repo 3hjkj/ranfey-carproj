@@ -3,3 +3,11 @@
 /install/*
 /log/*
 /.vscode/*
+
+# 调试产物：点云可视化截图与临时数据
+*.png
+*.xyz
+
+# Python 字节码
+__pycache__/
+*.pyc

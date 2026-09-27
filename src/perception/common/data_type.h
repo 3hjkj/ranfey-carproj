@@ -22,6 +22,7 @@
 #include "lidar_points_type.h"
 #include "lidar_msgs/msg/object.hpp"
 #include "lidar_msgs/msg/objects.hpp"
+#include "lidar_msgs/msg/vision_boxes.hpp"
 #define MODE_RW_UGO (S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH)
 namespace perception
 {
@@ -128,6 +129,8 @@ namespace perception
         std::vector<lidar_msgs::msg::Objects> fusion_old_objs; // 用于存储上几帧结果
         std::vector<lidar_msgs::msg::Objects> fusion_tmp_objs; // 用于存储中间的匹配结果，包括匹配，上一帧未匹配，现在未匹配
         lidar_msgs::msg::Objects fusion_output_objects;        // 输出现在的结果
+        lidar_msgs::msg::Cells fusion_cells;                   // 融合目标→占用栅格（喂决策）
+        bool fusion_valid = false;                             // 本轮融合结果是否有效
         std::vector<PAndIdx> p_id;                        // 用于存储卡尔曼滤波的p和目标id
         std::vector<PAndIdx> p_id_old;
         std::vector<PAndIdx> p_id_tmp;
@@ -145,6 +148,7 @@ namespace perception
         lidar_msgs::msg::Objects radar_objs;
         // camera
         lidar_msgs::msg::Objects camera_objs;
+        lidar_msgs::msg::VisionBoxes vision_boxes;   // YOLO 2D 检测框
         // fusion
         FusionObjs fusion_objs;
     };

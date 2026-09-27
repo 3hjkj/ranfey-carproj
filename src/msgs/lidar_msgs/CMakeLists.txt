@@ -16,6 +16,8 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/Cells.msg"
   "msg/Object.msg"
   "msg/Objects.msg"
+  "msg/VisionBox.msg"
+  "msg/VisionBoxes.msg"
   DEPENDENCIES std_msgs
 )
 

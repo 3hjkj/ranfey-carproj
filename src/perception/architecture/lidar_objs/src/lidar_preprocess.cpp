@@ -15,7 +15,9 @@ namespace perception
         INFO("LidarPreprocess Init");
 
         /* -------- 1. 调试发布器 -------- */
-        debug_ = node_->declare_parameter<bool>("debug_pre", false);
+        if (!node_->has_parameter("debug_pre"))
+            node_->declare_parameter<bool>("debug_pre", false);
+        node_->get_parameter("debug_pre", debug_);
         if (debug_)
         {
             pub_lidar_voxel       = node_->create_publisher<sensor_msgs::msg::PointCloud2>("/perception/lidar_voxel",          10);
@@ -25,9 +27,11 @@ namespace perception
         }
 
         /* -------- 2. 参数读取 -------- */
-        std::string cfg_path =
+        std::string cfg_path;
+        if (!node_->has_parameter("preprocess_config"))
             node_->declare_parameter<std::string>("preprocess_config",
                                                     "config_json/preprocess.json");
+        node_->get_parameter("preprocess_config", cfg_path);
         ReadCellConfigJson(cfg_path, proprecess_config_);
 
         row = static_cast<int>((proprecess_config_.xmax - proprecess_config_.xmin)

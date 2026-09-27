@@ -5,6 +5,7 @@
 #include "lidar_obj_type.h"
 #include <pcl/filters/radius_outlier_removal.h>
 #include <pcl/filters/voxel_grid.h>
+#include <pcl/segmentation/progressive_morphological_filter.h>
 #include <math.h>
 #include "json/include/json.h"
 #include <iomanip>
@@ -16,7 +17,14 @@ namespace perception
         class LidarPreprocess2
         {
         private:
-            // objs_config objs_config_;
+            /* 由 LidarCluster::Init() 用 objs.json 注入（Configure）。
+               ⚠ 只读其中的 ground_* / pmf_* / cluster_voxel_size /
+               ror_stage1_min_neighbors 这几项。objs_config 里**也有**
+               xmin/xmax/zmin/zmax/car_x_xxx/cell_size_xxx 这一批，且 objs.json
+               确实填了它们（那是历史遗留），但 ROI 与车体框的门限读的是下面的
+               proprecess_config_（来自 preprocess.json）——**不要把 ROI 改读
+               这个结构体**，那会悄悄缩小 ROI 并挪动车体框。 */
+            objs_config objs_config_;
             proprecess_config proprecess_config_;
             // pcl::PointCloud<pcl::PointXYZI>::Ptr clouds_filter(new pcl::PointCloud<pcl::PointXYZI>);
             //debug
@@ -152,6 +160,12 @@ namespace perception
             explicit LidarPreprocess2(const rclcpp::Node::SharedPtr& node);
             ~LidarPreprocess2();
             int Init();
+
+            /* 注入 objs.json 解析出来的配置。仿 PointsCluster::Configure，
+               由 LidarCluster::Init() 在读完 json 之后调用。不调也能跑——
+               成员有类内初始化的默认值。 */
+            void Configure(const objs_config &cfg);
+
             int DeleteNanPoints(const pcl::PointCloud<pcl::PointXYZ>::Ptr &lidar_points,
                                 pcl::PointCloud<pcl::PointXYZ>::Ptr &data_out);
             int VoxelFilter(const pcl::PointCloud<pcl::PointXYZ>::Ptr &lidar_points,
@@ -189,6 +203,22 @@ namespace perception
                              pcl::PointCloud<pcl::PointXYZI>::Ptr no_ground_points,
                              float &threshold_h,
                              int &points_num);
+            /* 渐进形态学滤波(Zhang 2003)地面分割：窗口逐轮放大，每轮做一次形态学
+               开运算（先腐蚀取窗口内 min z、再膨胀取 max），点 z 与开运算结果的差
+               超过当轮阈值即判为非地面并移出后续轮次。
+
+               输入应由调用方用 ground_voxel_size 体素化（比聚类体素**细**）——
+               开运算需要真正被采样到的地面曲面，0.3 m 体素下近地点只有几十个，
+               窗口里只有一两个点，曲面等于没采样。
+
+               输出两堆**互斥且并集 = 输入（NaN 除外）**。这是旧法 GroundPoints
+               做不到的：旧法把点数不足的格子整格塞进地面丢掉，实测吞掉 7.1% 的
+               真实结构。返回 1 表示输入为空/过小/PMF 失败，此时两堆都清空，
+               调用方不得把输入当非地面使用。 */
+            int GroundSegmentationPMF(const pcl::PointCloud<pcl::PointXYZ>::Ptr &data_in,
+                                      pcl::PointCloud<pcl::PointXYZ>::Ptr &ground_points,
+                                      pcl::PointCloud<pcl::PointXYZ>::Ptr &no_ground_points);
+
             int RadiusFilter(const pcl::PointCloud<pcl::PointXYZ>::Ptr &data_in,
                              pcl::PointCloud<pcl::PointXYZ>::Ptr &data_out,
                              float &radius_search,

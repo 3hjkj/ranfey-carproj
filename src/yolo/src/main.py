@@ -1,6 +1,8 @@
 import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import Image
+from std_msgs.msg import Header
+from lidar_msgs.msg import VisionBox, VisionBoxes
 from cv_bridge import CvBridge
 import cv2
 import threading
@@ -15,6 +17,9 @@ class YOLONode(Node):
         self.subscription = self.create_subscription(
             Image, "camera/image", self.image_callback, 10
         )
+
+        # 发布检测结果（像素 2D 框），供感知融合使用
+        self.pub_boxes = self.create_publisher(VisionBoxes, "/perception/yolo_boxes", 10)
 
         self.model = YOLO(
             "/home/nvidia/zhitai/qingling_ros2/src/yolo/src/yolo11n.pt"
@@ -60,6 +65,21 @@ class YOLONode(Node):
 
             with self.lock:
                 self.latest_boxes = boxes  # 更新框坐标缓存
+
+            # 发布检测框消息（供感知融合消费）
+            h, w = frame.shape[:2]
+            msg = VisionBoxes()
+            msg.header = Header()
+            msg.header.stamp = self.get_clock().now().to_msg()
+            msg.image_width = w
+            msg.image_height = h
+            for x1, y1, x2, y2, cls_id, score in boxes:
+                b = VisionBox()
+                b.x1, b.y1, b.x2, b.y2 = float(x1), float(y1), float(x2), float(y2)
+                b.cls_id = int(cls_id)
+                b.score = float(score)
+                msg.boxes.append(b)
+            self.pub_boxes.publish(msg)
 
     def display_loop(self):
         names = self.model.names

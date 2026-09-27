@@ -21,7 +21,7 @@ float32 confidence
 float32 speed
 float32 rel_heading
 float32 abs_heading
-int32 type  # 0 - unknown; 1 - truck; 2 - car; 3 - person ; 4 - cyclist  
+int32 type  # 0 - unknown; 1 - truck; 2 - car; 3 - person ; 4 - cyclist; 5 - wall/building
 int32 source # 0 -unknown ; 1 - lidar; 2 - radar ; 3 - camera ; 4 - ultrasound
 float64 time
 float32 score

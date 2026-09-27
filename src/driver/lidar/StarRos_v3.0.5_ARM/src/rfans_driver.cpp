@@ -5,8 +5,12 @@
  */
 #include <unistd.h>
 #include <string>
+#include <vector>
+#include <cstring>
+#include <cstdio>
 #include <sstream>
 #include <sys/socket.h>
+#include <sys/uio.h>
 #include <arpa/inet.h>
 #include <poll.h>
 #include <errno.h>
@@ -163,8 +167,14 @@ int Rfans_Driver::setSdkPara(bool is_real_time)
   }else
   {
     blockPtN = DEC_POINT_SIZE;
-    m_sdk_buff.rawStream._ptr  = new char[UDP_MAX_SIZE]();
-    m_sdk_buff.rawStream.cur_size = UDP_MAX_SIZE;
+    /* 实时流的原始缓冲必须能容下【多个】UDP 包：
+     * decFastRun() 是流式解析，返回值是本次消耗掉的字节数，调用方要滑动窗口
+     * （见 playBackMode 的用法）。原来只分配 UDP_MAX_SIZE(1500)，而一个雷达包
+     * 就是 PACKET0_SIZE(1412) 字节，连两个包都放不下，更不可能跨包拼出完整扫描帧。 */
+    const int RT_STREAM_SIZE = UDP_MAX_SIZE * 64;   // 96K
+    m_sdk_buff.rawStream._ptr  = new char[RT_STREAM_SIZE]();
+    m_sdk_buff.rawStream.buff_capacity = RT_STREAM_SIZE;
+    m_sdk_buff.rawStream.cur_size = 0;   // 从"空"开始：原来是满 buff，等于告诉解码器有 1500 字节垃圾数据
     m_sdk_buff.frame_stream._lpoints=(LaserPoint_S*) new char[250000 * sizeof(LaserPoint_S)];
   }
 
@@ -237,34 +247,9 @@ Rfans_Driver::Rfans_Driver(const rclcpp::NodeOptions & opt)
     }
   }
   else {//实时解算
-    this->socketInit();//初始化socket
     m_is_real_time=1;
-    bool mutli_Start;
-    if (this->get_parameter("/mult_lidar", mutli_Start)) // 启动多台雷达
-    {
-      // 如果多台雷达启动的时候，multi_lidar.launch 含有这个参数，默认值设置为 false，由配置参数中获取真值
-      rclcpp::Parameter device_start_param;
-      bool device_start = false;
-      if (this->get_parameter("Is_Start", device_start_param)) {
-        device_start = device_start_param.as_bool();
-      }
-
-      if (device_start) // normal start
-      {
-        configDeviceParams();
-        RCLCPP_INFO(this->get_logger(), "%s normal start", m_input_para.device_ip.c_str());
-      }
-      else {
-        stopDevice(); // stop device
-      }
-    }
-    else // 启动单台雷达
-    {
-      configDeviceParams(); // speed control command writing
-    }
-    std::thread temper_thd=thread(&Rfans_Driver::getTemperFrHeart,this);
-    temper_thd.detach();
-    s_this = this ;//实时解算才会有设备通讯
+    // 设备通迅的初始化要等对象被 shared_ptr 接管之后再做，
+    // 见下方 initDevice()，这里只决定模式。
   }
   m_sdk_para.cfg_para.cfg_path=m_input_para.cfg_path;
   //配置参数及buff的创建
@@ -278,7 +263,28 @@ Rfans_Driver::Rfans_Driver(const rclcpp::NodeOptions & opt)
       m_input_para.save_xyz=false;
       RCLCPP_WARN(this->get_logger(), "save_xyz is failure");
     }
+    else
+      /* 文本模式才用 m_frame_buf：每点最多 48 字节（%.6g + 逗号 + 换行）。
+       * 二进制模式整块写 buff_original_cloud，根本不经过这个缓冲。 */
+      m_frame_buf.reserve(45056 * 48);
   }
+  /* 二进制落盘：每点 6 个 float（x,y,z,hangle,range,intent）。
+   * 这里不做任何格式化，只 memcpy，所以能跑满速。 */
+  if(m_save_bin)
+  {
+    save_bin_file.open(m_bin_path, std::ios::out | std::ios::binary | std::ios::trunc);
+    if(!save_bin_file.is_open())
+    {
+      m_save_bin=false;
+      RCLCPP_WARN(this->get_logger(), "save_bin open failure: %s", m_bin_path.c_str());
+    }
+    else
+      RCLCPP_INFO(this->get_logger(), "save_bin -> %s (每点 %zu 字节)",
+                  m_bin_path.c_str(), sizeof(TransClound_S));
+  }
+  /* UDP 转发：建 socket 失败不致命，只是转发这条路不通，落盘和发布照常。 */
+  if(m_net_forward && netInit() < 0)
+    m_net_forward = false;
   if(m_input_para.save_isf)
   {
     if(creatIsf(m_input_para.isf_path)<0)
@@ -330,6 +336,42 @@ void Rfans_Driver::getTemperFrHeart()
 }
 
 
+void Rfans_Driver::initDevice()
+{
+  if (!m_is_real_time)
+    return;//回放模式不需要和设备通迅
+
+  this->socketInit();//初始化socket
+
+  bool mutli_Start;
+  if (this->get_parameter("/mult_lidar", mutli_Start)) // 启动多台雷达
+  {
+    // 如果多台雷达启动的时候，multi_lidar.launch 含有这个参数，默认值设置为 false，由配置参数中获取真值
+    rclcpp::Parameter device_start_param;
+    bool device_start = false;
+    if (this->get_parameter("Is_Start", device_start_param)) {
+      device_start = device_start_param.as_bool();
+    }
+
+    if (device_start) // normal start
+    {
+      configDeviceParams();
+      RCLCPP_INFO(this->get_logger(), "%s normal start", m_input_para.device_ip.c_str());
+    }
+    else {
+      stopDevice(); // stop device
+    }
+  }
+  else // 启动单台雷达
+  {
+    configDeviceParams(); // speed control command writing
+  }
+
+  std::thread temper_thd=thread(&Rfans_Driver::getTemperFrHeart,this);
+  temper_thd.detach();
+  s_this = this ;//实时解算才会有设备通讯
+}
+
 void Rfans_Driver::socketInit()
 {
   m_ctl_socket   =new rfans_driver::IOSocketAPI(this->shared_from_this(), m_input_para.device_ip, m_input_para.msgport, m_input_para.msgport);
@@ -338,6 +380,18 @@ void Rfans_Driver::socketInit()
 }
 Rfans_Driver::~Rfans_Driver()
 {
+  /* 落盘改成每帧一次 write()，已经没有跨帧残留的缓冲了，这里只负责关文件和 socket。
+   * 注意：被 SIGTERM 杀掉时析构不会执行（qemu 下会直接 abort 并 core dump），
+   * 所以最后一帧可能没写完，分析前按 sizeof(TransClound_S) 即 40 字节对齐截断即可。 */
+  if(save_xyz_file.is_open())
+    save_xyz_file.close();
+  if(save_bin_file.is_open())
+    save_bin_file.close();
+  if(m_net_fd >= 0)
+  {
+    ::close(m_net_fd);
+    m_net_fd = -1;
+  }
 }
 int Rfans_Driver::cloundTransForm(TransClound_S& out_ros,LaserPoint_S * dec_input,CalcLaserPt_S * cal_input ,int idx)
 {
@@ -379,9 +433,192 @@ int Rfans_Driver::cloundTransForm(TransClound_S& out_ros,LaserPoint_S * dec_inpu
       }
     }
   }
-  if(m_input_para.save_xyz)
-    save_xyz_file<<out_ros.x<<","<<out_ros.y<<","<<out_ros.z<<","<<out_ros.hangle<<","<< out_ros.range<<","<<out_ros.intent<<"\n";
+  /* 这里不再写盘。本函数是在 queue_mutex 保护区内逐点调用的，
+   * 在这里做任何 I/O 都会拖长临界区、挡住解码线程排空 socket。
+   * 落盘统一挪到帧末、锁外的 dumpFrame()。 */
   return 1;
+}
+
+/* 整帧落盘。**必须在 queue_mutex 之外调用** —— 这正是它存在的理由。
+ *
+ * 原先写盘写在 cloundTransForm() 里，而那个函数是在 calculation() 持锁的
+ * 逐点循环中调的。消费线程每帧要持锁做完 4.5 万点的转换 + 写盘，解码线程
+ * 就只能干等，socket 缓冲在此期间不再被排空，内核按到达顺序丢包。
+ * 实测后果：收包速率看着是满的（2381 包/秒，缓冲余量全程 0），但每一圈
+ * 只剩 75.6% 的点 —— 丢在 socket 上，不在解码器里，所以从驱动内部看不出来。
+ *
+ * 现在逐点循环里只做纯计算，帧末解锁后再整帧一次性写出，临界区回到原来的
+ * 长度，解码线程不再被挡。代价是极端情况下消费跟不上会**整帧被覆盖丢弃**
+ * （frame_stream 是单槽），但那总好过每帧都残缺。 */
+void Rfans_Driver::dumpFrame()
+{
+  const size_t n = m_cur_count;
+  if(n == 0 || m_input_para.display_mode != "overlay")
+    return;
+
+  if(m_save_bin)
+  {
+    /* 把 TransClound_S 数组原样整块写出：一次 write()，逐点循环彻底省掉。
+     * buff_original_cloud 本来就是本帧点的连续数组，没有任何重排的需要 ——
+     * 之前逐点拼 6 个 float 是白花 45k 次循环，qemu 下就是 ~30 毫秒/帧。
+     *
+     * 结构体是 #pragma pack(1) 的 40 字节：
+     *   float x,y,z,intent,vangle,hangle,range (7×4=28)
+     *   double timeflag (8)  +  int laserid (4)          = 40
+     * 宿主机按同样布局用 numpy 解析即可。比只存 6 个 float 多带
+     * vangle/timeflag/laserid —— laserid 就是激光环号，做聚类时用得上。 */
+    save_bin_file.write(reinterpret_cast<const char*>(buff_original_cloud.data()),
+                        (std::streamsize)(n * sizeof(TransClound_S)));
+  }
+  else if(m_input_para.save_xyz)
+  {
+    /* 文本模式：%.6g 与原来 iostream 的 6 位有效数字输出一致，格式不变。
+     * 每点一次 snprintf，仍然很贵，但已经挪出锁外，不会再造成残缺帧，
+     * 只是整体帧率会掉。想要满速请用 save_bin。 */
+    if(m_frame_buf.size() < n * 48)
+      m_frame_buf.resize(n * 48);
+    char *d = m_frame_buf.data();
+    const TransClound_S *p = buff_original_cloud.data();
+    for(size_t i = 0; i < n; ++i)
+    {
+      int k = snprintf(d, 48, "%.6g,%.6g,%.6g,%.6g,%.6g,%.6g\n",
+                       p[i].x, p[i].y, p[i].z,
+                       p[i].hangle, p[i].range, p[i].intent);
+      if(k > 0)
+        d += (k < 48) ? k : 47;
+    }
+    save_xyz_file.write(m_frame_buf.data(), (size_t)(d - m_frame_buf.data()));
+  }
+}
+
+/* 建立 UDP 转发 socket。
+ *
+ * connect() 之后就能直接 send()，不必每次填 sockaddr；副作用是内核会把这个
+ * socket 绑定到对端，若宿主 relay 没起来会收到 ICMP 端口不可达，send 返回
+ * ECONNREFUSED —— 正好是个现成的"对面没在听"信号，日志里报一次就够。 */
+int Rfans_Driver::netInit()
+{
+  m_net_fd = ::socket(AF_INET, SOCK_DGRAM, 0);
+  if(m_net_fd < 0)
+  {
+    RCLCPP_WARN(this->get_logger(), "net_forward: socket() 失败: %s", strerror(errno));
+    return -1;
+  }
+
+  struct sockaddr_in dst;
+  memset(&dst, 0, sizeof(dst));
+  dst.sin_family = AF_INET;
+  dst.sin_port   = htons((uint16_t)m_net_port);
+  if(::inet_pton(AF_INET, m_net_host.c_str(), &dst.sin_addr) != 1)
+  {
+    RCLCPP_WARN(this->get_logger(), "net_forward: 目标地址不合法 '%s'", m_net_host.c_str());
+    ::close(m_net_fd); m_net_fd = -1;
+    return -1;
+  }
+  if(::connect(m_net_fd, (struct sockaddr *)&dst, sizeof(dst)) < 0)
+  {
+    RCLCPP_WARN(this->get_logger(), "net_forward: connect %s:%d 失败: %s",
+                m_net_host.c_str(), m_net_port, strerror(errno));
+    ::close(m_net_fd); m_net_fd = -1;
+    return -1;
+  }
+
+  /* 发送缓冲给大一点，单帧 1.36 MB、7.5 帧/秒，默认 208 KB 会频繁 send 失败。
+   * 注意内核同样会把 SO_SNDBUF 折半记账，给 4 MB 实际约 2 MB。 */
+  int sndbuf = 4 * 1024 * 1024;
+  ::setsockopt(m_net_fd, SOL_SOCKET, SO_SNDBUF, &sndbuf, sizeof(sndbuf));
+
+  RCLCPP_INFO(this->get_logger(), "net_forward -> udp://%s:%d", m_net_host.c_str(), m_net_port);
+  return 0;
+}
+
+/* 整帧 UDP 转发。和 dumpFrame() 一样 **必须在 queue_mutex 之外调用** ——
+ * 帧末锁外发，消费线程不因为网络阻塞多持一次锁，解码线程照常排空 socket。
+ *
+ * 报文格式（全部小端）：
+ *   magic(4) frame_id(4) pkt_idx(2) pkt_total(2) n_points(4) reserved(4) = 20 字节
+ *   后面跟本片数据，最多 PAYLOAD 字节
+ * 整帧 34000 点 × 40 字节 = 1.36 MB，切成 937 片；7.5 帧/秒下约 7000 包/秒。
+ * 实测（容器内 qemu 下）这套发送循环能跑 182 帧/秒，余量二十四倍，够用。
+ *
+ * 宿主 relay 按 frame_id 收齐所有片后，把整块拼回来直接 memcpy 进
+ * PointCloud2.data —— TransClound_S 是 40 字节的紧凑结构，和 PointCloud2 的
+ * point_step 一一对应，所以一个点都不用转换。字段顺序见 point_types.h。
+ *
+ * 发送用 MSG_DONTWAIT：宁可丢这一片，也不能让 UDP 把消费线程堵住。 */
+void Rfans_Driver::netFrame()
+{
+  const size_t n = m_cur_count;
+  if(n == 0 || m_net_fd < 0 || m_input_para.display_mode != "overlay")
+    return;
+
+  /* 每包净荷 —— 这个 1452 是有来历的，别想当然往大改。
+   *
+   * 20 字节头 + 1452 = 1472 = 1500(MTU) − 20(IP 头) − 8(UDP 头)。
+   *
+   * 在 WSL2 镜像网络模式下，发往 127.0.0.1 的包并不走真正的 lo：
+   *   $ ip route get 127.0.0.1
+   *   127.0.0.1 via 169.254.73.152 dev loopback0 ...
+   * 走的是一块按 1500 处理的 loopback0，而且**超过 MTU 的 IP 分片会被丢掉**。
+   * 实测边界正好卡在 1472：1472 通，1473 就没了。
+   *
+   * 最坑的是它**静默**：sendmsg 返回成功、不报错、errno 也是 0，包就是不
+   * 到。所以如果你把这里改大，表现是"驱动一切正常、relay 一个包都收不到"。
+   *
+   * 发往宿主真实 IP（192.168.x.x 等）没有这个限制，60000 都能过；但这个
+   * 默认值不依赖宿主 IP 会变，更稳。 */
+  constexpr size_t PAYLOAD = 1452;
+  /* pkt_total 是 uint16，真要把 PAYLOAD 改小到包数超过 65535，这里直接编译不过 */
+  static_assert((45056 * sizeof(TransClound_S) + PAYLOAD - 1) / PAYLOAD < 65536,
+                "PAYLOAD 太小，每帧包数会撑爆 uint16 的 pkt_total");
+  const char *base = reinterpret_cast<const char *>(buff_original_cloud.data());
+  const size_t total = n * sizeof(TransClound_S);
+  const uint16_t pkt_total = (uint16_t)((total + PAYLOAD - 1) / PAYLOAD);
+
+  /* 先把所有片塞进内核发送队列，再回来查一次错误。
+   * 逐片检查会多 20 多次系统调用，这里图省事，代价是错误定位粗一点。 */
+  for(uint16_t i = 0; i < pkt_total; ++i)
+  {
+    const size_t off = (size_t)i * PAYLOAD;
+    const uint32_t len = (uint32_t)((total - off < PAYLOAD) ? (total - off) : PAYLOAD);
+
+    char hdr[20];
+    uint32_t magic = 0x314E4652u;        // 'RFN1'
+    uint32_t fid   = m_net_frame_id;
+    uint32_t npts  = (uint32_t)n;
+    uint32_t rsv   = 0;
+    memcpy(hdr +  0, &magic, 4);
+    memcpy(hdr +  4, &fid,   4);
+    memcpy(hdr +  8, &i,     2);
+    memcpy(hdr + 10, &pkt_total, 2);
+    memcpy(hdr + 12, &npts,  4);
+    memcpy(hdr + 16, &rsv,   4);
+
+    struct iovec iov[2];
+    iov[0].iov_base = hdr;
+    iov[0].iov_len  = sizeof(hdr);
+    iov[1].iov_base = const_cast<char *>(base + off);
+    iov[1].iov_len  = len;
+
+    struct msghdr msg;
+    memset(&msg, 0, sizeof(msg));
+    msg.msg_iov    = iov;
+    msg.msg_iovlen = 2;
+
+    if(::sendmsg(m_net_fd, &msg, MSG_DONTWAIT) < 0)
+      ++m_net_dropped;
+  }
+
+  ++m_net_frame_id;
+
+  if(m_net_dropped)
+  {
+    /* 每 100 帧报一次，别刷屏。持续增长说明宿主 relay 没跟上。 */
+    static int cnt = 0;
+    if(++cnt % 100 == 0)
+      RCLCPP_WARN(this->get_logger(), "net_forward: 累计丢弃 %lu 个包（宿主 relay 是否在跑？）",
+                  (unsigned long)m_net_dropped);
+  }
 }
 
 void Rfans_Driver::cal2RosClound(LaserPoint_S * dec_input,CalcLaserPt_S * cal_input)
@@ -508,7 +745,12 @@ int Rfans_Driver::realTimeMode()
 
   m_sdk_para.cfg_opt.cfg_Itn  =CFG_FILE;      //  文件头或配置文件
   //多文件循环解算
-  m_sdk_obj._cfg_ptr->getLidarCfg(header_buff, ISF_HEADER, m_sdk_para.cfg_para, m_sdk_para.cfg_opt);
+  int cfg_ret = m_sdk_obj._cfg_ptr->getLidarCfg(header_buff, ISF_HEADER, m_sdk_para.cfg_para, m_sdk_para.cfg_opt);
+  /* 标定文件对不上时这里会失败，而失败的后果是点云角度整体偏 —— 不会崩，
+   * 很难从数据上看出是标定问题。所以留一条明确的告警。 */
+  if (cfg_ret < 0)
+    RCLCPP_WARN(this->get_logger(), "getLidarCfg 失败(返回 %d)：标定文件 %s 与 %s 不匹配？",
+                cfg_ret, m_sdk_para.cfg_para.cfg_path.c_str(), m_input_para.device_name.c_str());
   std::thread cal_thread=std::thread(&Rfans_Driver::calculation,this);
   cal_thread.detach();
   ((float*)header_buff)[ADR_D_DEVICE_ID]=m_heart.device_id;//从心跳包拿设备编号
@@ -528,20 +770,31 @@ int Rfans_Driver::realTimeMode()
   int surpBufSize = 0;
   while (true)
   {
-    if(!m_data_socket->read((unsigned char*)m_sdk_buff.rawStream._ptr, UDP_MAX_SIZE)||(int)m_heart.device_id==0)
+    /* 每次只收【一个完整】UDP 数据报：recvfrom 给的长度小于报文长度会把包截断，
+     * 所以读取长度固定用 UDP_MAX_SIZE，但落点要接在已缓存数据的后面。
+     * 缓冲空间不够一个整包时就先不读，等解码器消费出空间。 */
+    int space = m_sdk_buff.rawStream.buff_capacity - m_sdk_buff.rawStream.cur_size;
+    int rd_n = 0;
+    if (space >= UDP_MAX_SIZE)
+      rd_n = m_data_socket->read((unsigned char*)m_sdk_buff.rawStream._ptr
+                                 + m_sdk_buff.rawStream.cur_size, UDP_MAX_SIZE);
+    if (rd_n > 0)
+      m_sdk_buff.rawStream.cur_size += rd_n;
+    if((int)m_heart.device_id==0 || m_sdk_buff.rawStream.cur_size <= 0)
     {
      continue;
-   //  ROS_INFO("Line501:decStream.tgidx_vec.size()=%d\n",m_sdk_buff.decStream.tgidx_vec.size());
     }
     //ROS_INFO("Line503:decStream.tgidx_vec.size()=%d\n",m_sdk_buff.decStream.tgidx_vec.size());
-    if(m_is_isf)//是否保存ISF文件
+    if(m_is_isf&&rd_n>0)//是否保存ISF文件
     {
-      m_isf_count+=UDP_MAX_SIZE;
+      // 本包的起点不再是缓冲首地址，而是刚读进来的那一段
+      char* pkt=m_sdk_buff.rawStream._ptr+m_sdk_buff.rawStream.cur_size-rd_n;
+      m_isf_count+=rd_n;
       if(m_isf_count<MAX_ISF_SIZE)
-        m_isf_fp.write(m_sdk_buff.rawStream._ptr,UDP_MAX_SIZE);
+        m_isf_fp.write(pkt,rd_n);
       else
       {
-        int cnt=MAX_ISF_SIZE-(m_isf_count-UDP_MAX_SIZE);
+        int cnt=MAX_ISF_SIZE-(m_isf_count-rd_n);
         if(cnt>0)
         {
           temp_buf.resize(MAX_ISF_SIZE-(m_isf_count-UDP_MAX_SIZE),0);
@@ -554,7 +807,23 @@ int Rfans_Driver::realTimeMode()
         m_isf_count+=ISF_HEADER;
       }
     }
-    m_sdk_obj._dec_ptr->decFastRun(m_sdk_buff.rawStream, m_sdk_buff.decStream, m_sdk_para.dec_para, m_sdk_para.dec_opt);
+    m_sdk_buff.decStream.tgidx_vec.resize(0);
+    int rtn = m_sdk_obj._dec_ptr->decFastRun(m_sdk_buff.rawStream, m_sdk_buff.decStream, m_sdk_para.dec_para, m_sdk_para.dec_opt);
+    /* 把解码器已消耗掉的 rtn 字节移出缓冲、剩余数据前移 —— 和 playBackMode 的写法一致。
+     * 少了这一步，cur_size 永远不变、每个包都从缓冲头部重新解一次，
+     * 解码器永远看不到连续的码流，帧边界（tgidx）自然出不来。 */
+    if (rtn > 0)
+    {
+      if (rtn >= m_sdk_buff.rawStream.cur_size)
+        m_sdk_buff.rawStream.cur_size = 0;
+      else
+      {
+        memmove(m_sdk_buff.rawStream._ptr,
+                m_sdk_buff.rawStream._ptr + rtn,
+                m_sdk_buff.rawStream.cur_size - rtn);
+        m_sdk_buff.rawStream.cur_size -= rtn;
+      }
+    }
     //调试代码
 
     if (m_sdk_buff.decStream.tgidx_vec.size() <= 0)
@@ -607,6 +876,8 @@ void Rfans_Driver::calculation()
     }
     locker.unlock();
     rosCloundPulish();
+    dumpFrame();          // 锁外落盘：本帧点数就是 m_cur_count
+    netFrame();           // 锁外 UDP 转发；只在 net_forward=true 时真正发包
     //ROS_INFO("pub_count=%d",m_cur_count);
     //帧数初始化
     if(m_input_para.display_mode=="overlay")
@@ -870,6 +1141,14 @@ void Rfans_Driver::setupNodeParams()
   m_input_para.dataport      = this->declare_parameter<int>("device_port", 2014);
   m_input_para.heart_port    = this->declare_parameter<int>("heart_port", 2030);
   m_input_para.save_xyz      = this->declare_parameter<bool>("save_xyz", false);
+  /* 二进制落盘：满速采集用这个，别用 save_xyz（文本模式只能跑 1239 包/秒） */
+  m_save_bin                 = this->declare_parameter<bool>("save_bin", false);
+  m_bin_path                 = this->declare_parameter<std::string>("OutBIN_path", "");
+  /* UDP 转发：只在 qemu 模拟的容器里需要（DDS 组播发现用不了）。
+   * 车机上保持 false —— 那里节点直接 publish 就能被发现。 */
+  m_net_forward              = this->declare_parameter<bool>("net_forward", false);
+  m_net_host                 = this->declare_parameter<std::string>("net_host", "127.0.0.1");
+  m_net_port                 = this->declare_parameter<int>("net_port", 7500);
   m_input_para.use_gps       = this->declare_parameter<bool>("use_gps", true);
   m_input_para.device_ip     = this->declare_parameter<std::string>("device_ip", "192.168.0.3");
   m_input_para.scnSpeed      = this->declare_parameter<int>("rps", 20);

@@ -1,0 +1,20 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>sim_sensors</name>
+  <version>0.0.1</version>
+  <description>合成传感器数据源（无实车验证用）：模拟激光点云 + YOLO 检测框。毫米波由 radar_adapter(sim) 提供。</description>
+
+  <maintainer email="176980246@qq.com">wei</maintainer>
+  <license>MIT</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <depend>rclcpp</depend>
+  <depend>sensor_msgs</depend>
+  <depend>lidar_msgs</depend>
+  <depend>std_msgs</depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

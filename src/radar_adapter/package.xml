@@ -1,0 +1,20 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>radar_adapter</name>
+  <version>0.0.1</version>
+  <description>Radar adapter: bridges radar targets to /sensorRawData (radar_msgs/SensorData). sim + autocontrol modes.</description>
+
+  <maintainer email="176980246@qq.com">wei</maintainer>
+  <license>MIT</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <depend>rclcpp</depend>
+  <depend>radar_msgs</depend>
+  <depend>can_control_msgs</depend>
+  <depend>std_msgs</depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

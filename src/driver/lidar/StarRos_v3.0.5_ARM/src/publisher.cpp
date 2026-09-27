@@ -220,6 +220,9 @@ int main(int argc, char **argv)
   // 5. 实例化驱动
   auto driver_node = std::make_shared<rfans_driver::Rfans_Driver>(
     rclcpp::NodeOptions().allow_undeclared_parameters(true) );
+  // 必须等 make_shared 返回之后再初始化设备通迅：
+  // initDevice() 里会调 shared_from_this()，在构造函数中调用会抛 std::bad_weak_ptr。
+  driver_node->initDevice();
 
 
   // 6. 用定时器周期性调用 spinOnce()

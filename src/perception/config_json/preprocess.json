@@ -1,14 +1,14 @@
 {
-   "car_xmax": 1.0,
-   "car_xmin": -5.0,
-   "car_ymax": 2.0,
-   "car_ymin": -2.0,
+   "car_xmax": 3.9,
+   "car_xmin": -1.5,
+   "car_ymax": 0.5,
+   "car_ymin": -2.4,
    "cell_size_x": 0.5,
    "cell_size_y": 0.5,
    "xmax": 80.0,
    "xmin": -80.0,
    "ymax": 25.0,
    "ymin": -25.0,
-   "zmax": 0.2,
+   "zmax": 2.0,
    "zmin": -2.0
 }

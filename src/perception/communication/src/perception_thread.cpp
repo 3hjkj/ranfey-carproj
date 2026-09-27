@@ -30,6 +30,7 @@ PerceptionThread::PerceptionThread(const rclcpp::Node::SharedPtr& node)
   ros_bridge_    = std::make_shared<RosBridge>(node_);
   lidar_cell_    = std::make_shared<lidar_cells::LidarCell>(node_);
   lidar_cluster_ = std::make_shared<lidar_objs::LidarCluster>(node_);
+  fusion_        = std::make_shared<fusion::FusionNode>(node_);
   executor_      = std::make_shared<threadpool>(THREAD_NUM);
 }
 
@@ -39,14 +40,25 @@ int PerceptionThread::Init()
   ros_bridge_->Publish();         // 初始化时可先发布一次空结果
   lidar_cell_->Init();
   lidar_cluster_->Init();
+  fusion_->Init();
   return 0;
 }
 
-/* ─────────────────────── Start：主循环 ───────────────────────────── */
+/* ─────────────────────── Start：启动后台流水线线程 ─────────────────── */
 int PerceptionThread::Start(double /*hz*/)
 {
-  DataPool* DP = DataPool::Instance();
   INFO("~~~~~~~~~~ perception start ~~~~~~~~~~~~~~~");
+  /* 流水线循环放到后台线程，Start 立即返回；
+   * main 线程随即执行 rclcpp::spin(node) 独占处理全部回调（单执行器，无争抢）。
+   * 原来在循环里 spin_some 会与 main 的 spin 双执行器争抢同一节点。 */
+  std::thread([this]() { RunLoop(); }).detach();
+  return 0;
+}
+
+/* ─────────────────────── RunLoop：流水线主循环 ────────────────────── */
+void PerceptionThread::RunLoop()
+{
+  DataPool* DP = DataPool::Instance();
 
   rclcpp::Rate rate(10.0);                       // == ros::Rate(10)
   unsigned int a = 0;
@@ -89,6 +101,13 @@ int PerceptionThread::Start(double /*hz*/)
       INFO("lidar objs time = {} ms",
            (node_->get_clock()->now().seconds() - ts_start) * 1000.0);
 
+      /* ----- 3.5 三传感器融合（激光 + 雷达 + 相机） ----- */
+      const int fusion_ret = fusion_->Process(DP->main_data_, ts_start);
+      INFO("fusion ret={} tracks_out={} cells={}",
+           fusion_ret,
+           DP->main_data_.fusion_objs.fusion_output_objects.objs.size(),
+           DP->main_data_.fusion_objs.fusion_cells.cells.size());
+
       /* ----- 4. Publish 并清理缓存 ----- */
       ros_bridge_->Publish();
       DP->main_data_.lidar_objs.objs.clear();
@@ -98,13 +117,13 @@ int PerceptionThread::Start(double /*hz*/)
       DP->main_data_.lidar_points_cells.reset();
     }
 
-    /* spin_some 等价于原来的 ros::spinOnce() */
-    rclcpp::spin_some(node_);
+    /* 回调由 main 线程的 rclcpp::spin(node) 独占处理，本循环只跑流水线。
+     * 不要再在此处 spin_some：双执行器并发 spin 同一节点会造成争抢，
+     * 雷达/yolo 这类低频回调被排到 0.3s+ 之后（新鲜度误判 STALE、消息掉队）。 */
     rate.sleep();
   }
 
   spdlog::shutdown();
-  return 0;
 }
 
 } // namespace perception
