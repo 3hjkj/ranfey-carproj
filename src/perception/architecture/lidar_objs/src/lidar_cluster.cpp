@@ -61,6 +61,28 @@ void PointsCluster::Configure(const lidar_objs::objs_config& cfg)
   wall_cfg_.max_thin    = cfg.wall_max_thin;
   wall_cfg_.min_span    = cfg.wall_min_span;
 
+  /* 片内局部密度过滤。只滤不丢是不管用的那个变体（实测非墙最大簇 123 → 207），
+     所以 drop 这个键也要打日志、也要盯。 */
+  wall_cfg_.density_drop      = cfg.wall_density_drop;
+  wall_cfg_.density_tau       = cfg.wall_density_tau;
+  wall_cfg_.density_k         = cfg.wall_density_k;
+  wall_cfg_.density_min_piece = cfg.wall_density_min_piece;
+  wall_cfg_.density_min_pts   = cfg.wall_density_min_pts;
+
+  /* 墙片拆竖平面。密度过滤只解决「两面墙被桥点焊住」，解决不了「一面直角墙
+     算一个目标还是两个」—— 拆完每张面各发一个目标，那个横跨房间的
+     6.35 × 11.39 m 的大框才会变成贴着墙的 8.0 × 0.3 m 与 7.7 × 0.9 m。
+     实测数据见 wall_extract.h 的「直角墙」一节。 */
+  wall_cfg_.face_split      = cfg.wall_face_split;
+  wall_cfg_.face_min_pts    = cfg.wall_face_min_pts;
+  wall_cfg_.face_iter       = cfg.wall_face_iter;
+  wall_cfg_.face_tol        = cfg.wall_face_tol;
+  wall_cfg_.face_max_tilt   = cfg.wall_face_max_tilt;
+  wall_cfg_.face_link       = cfg.wall_face_link;
+  wall_cfg_.face_merge_deg  = cfg.wall_face_merge_deg;
+  wall_cfg_.face_merge_gap  = cfg.wall_face_merge_gap;
+  wall_cfg_.face_merge_thin = cfg.wall_face_merge_thin;
+
   if (dbscan_) {
     dbscan_->SetEps(dbscan_eps_);
     dbscan_->SetMinPoints(dbscan_min_pts_);
@@ -79,6 +101,15 @@ void PointsCluster::Configure(const lidar_objs::objs_config& cfg)
        wall_cfg_.enable, wall_cfg_.seg_eps, wall_cfg_.seg_min_pts,
        wall_cfg_.min_points, wall_cfg_.min_zspan, wall_cfg_.max_thin,
        wall_cfg_.min_span);
+  INFO("wall density cfg: drop={} tau={} k={} min_piece={} min_pts={}",
+       wall_cfg_.density_drop, wall_cfg_.density_tau, wall_cfg_.density_k,
+       wall_cfg_.density_min_piece, wall_cfg_.density_min_pts);
+  INFO("wall face cfg: split={} min_pts={} iter={} tol={} max_tilt={} link={} "
+       "merge_deg={} merge_gap={} merge_thin={}",
+       wall_cfg_.face_split, wall_cfg_.face_min_pts, wall_cfg_.face_iter,
+       wall_cfg_.face_tol, wall_cfg_.face_max_tilt, wall_cfg_.face_link,
+       wall_cfg_.face_merge_deg, wall_cfg_.face_merge_gap,
+       wall_cfg_.face_merge_thin);
 }
 
 
@@ -104,33 +135,33 @@ PointsCluster::Pub(const pcl::PointCloud<pcl::PointXYZ>::Ptr& data_in)
   /* 2. 摘墙。墙和物体在几何上都是连续曲面，距离判据分不开它们（判据、三次失败
         尝试、实测数据见 wall_extract.h）。所以先把墙点整片分出去，让墙不再充当
         「物体之间的桥」，剩下的点再走主聚类。
+     is_sparse 是片内密度过滤剔出来的散点，**同样不喂主聚类**：留着它们会以
+        seg_eps 为跳板把隔着一米多的两片墙重新连起来（实测非墙最大簇 123 → 207）。
      keep_idx[k] = 第 k 个保留点在 data 里的原下标。主聚类跑在 data_objs 上，
         所以后面每个簇的下标都要经它映回 data —— 标签写错下标会标到别的点上。 */
   std::vector<char>             is_wall;
-  std::vector<std::vector<int>> wall_pieces = ExtractWalls(data, wall_cfg_, is_wall);
+  std::vector<char>             is_sparse;
+  std::vector<std::vector<int>> wall_pieces = ExtractWalls(data, wall_cfg_, is_wall, is_sparse);
 
   std::vector<int>    keep_idx;
   std::vector<points> data_objs;
   keep_idx.reserve(data.size());
   data_objs.reserve(data.size());
-  if (!wall_pieces.empty())
-  {
-    for (size_t i = 0; i < data.size(); ++i)
-      if (!is_wall[i]) { keep_idx.push_back(static_cast<int>(i)); data_objs.push_back(data[i]); }
-  }
-  else
-  {
-    for (size_t i = 0; i < data.size(); ++i) { keep_idx.push_back(static_cast<int>(i)); data_objs.push_back(data[i]); }
-  }
+  /* 什么都没被摘掉时这一圈就是恒等映射 —— 与没有这个模块时逐位相同，
+     所以不需要再分一条「没摘墙」的快路径出来。 */
+  for (size_t i = 0; i < data.size(); ++i)
+    if (!is_wall[i] && !is_sparse[i]) { keep_idx.push_back(static_cast<int>(i)); data_objs.push_back(data[i]); }
 
   /* 兜底：摘完剩下的点太少就整帧不摘。宁可退化成旧行为（墙和物体合并），
-     也不能因为判据在某帧抽风把点云清空、整帧不发目标 —— 那对下游是静默失效。 */
+     也不能因为判据在某帧抽风把点云清空、整帧不发目标 —— 那对下游是静默失效。
+     连密度过滤丢掉的散点也一并放回来：这一支的语义就是「这一帧当作没做过过滤」。 */
   if (!wall_pieces.empty() && (data_objs.size() < 50 || data_objs.size() * 10 < data.size()))
   {
     ERROR("wall extract skipped: keep {} / {} points", data_objs.size(), data.size());
     keep_idx.clear();
     data_objs.clear();
     wall_pieces.clear();
+    is_sparse.assign(data.size(), 0);
     for (size_t i = 0; i < data.size(); ++i) { keep_idx.push_back(static_cast<int>(i)); data_objs.push_back(data[i]); }
   }
 

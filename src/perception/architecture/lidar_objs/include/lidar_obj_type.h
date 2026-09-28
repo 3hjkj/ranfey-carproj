@@ -70,13 +70,51 @@ namespace perception
             /* 预分组 eps = cluster_voxel_size × 此值。**必须跟着体素走**：
                实测 eps 恰好等于体素格距时（体素 0.30 / eps 0.30）面邻接在浮点
                边界上断掉，只摘掉 5.6% 的点；到 0.30×√2=0.424 起开始吞物体。
-               实测安全带 [1.06, 1.15]，默认 1.10。改 cluster_voxel_size 必须重测。 */
-            double wall_seg_eps_ratio = 1.10;
+               回放数据上量出的安全带是 [1.06, 1.15]，但那份数据每帧逐点相同、
+               看不出帧间不稳：真机上 1.10 的墙点波动 22%、最大非墙簇 143~256
+               （74%），1.27 才落到台地（波动 9%）。代价是两面墙被稀疏的地面
+               残点焊成一片 —— 由下面那组密度键解决。改 cluster_voxel_size
+               必须重测 ratio 与 density。推导见 wall_extract.h。 */
+            double wall_seg_eps_ratio = 1.27;
             int    wall_seg_min_pts   = 3;     // 预分组的连通性门槛，与主聚类分开
             int    wall_min_points    = 30;    // 片点数下限。刻意偏严：宁可漏判不可误判
             double wall_min_zspan     = 1.5;   // 片 z 跨度下限，把地面残点/桌面挡在外面
             double wall_max_thin      = 0.15;  // 薄度 side/span 上限；单面墙约 0.01
             double wall_min_span      = 3.0;   // XY 跨度分支；环状墙薄度大，靠这支进来
+
+            /* ── 片内局部密度过滤（wall_extract.h 的「1.27 的代价」一节）──
+               作用：把 1.27 档下被稀疏地面残点串起来的两片墙重新分开。
+               判据：片内每个点到第 k 近邻的距离 < tau 才算「实体点」，实体点
+               重连之后才判墙；被剔掉的散点**整帧丢掉**（density_drop），否则
+               它们会流回主聚类重新当桥（实测非墙最大簇 123 → 207）。
+               density_tau <= 0 或 density_k <= 0 时整条路径不生效，退化成
+               纯几何判据 —— 真机 A/B 靠这一点。 */
+            bool   wall_density_drop      = true;   // 稀疏点是否整帧丢弃
+            double wall_density_tau       = 0.15;   // 半径 (m)：tau 内有 >= k 个其他点才算实体
+            int    wall_density_k         = 3;      // 上面那个 k
+            int    wall_density_min_piece = 10;     // 片小于这个点数就完全不碰（不测密度也不丢点）
+            int    wall_density_min_pts   = 20;     // 片内实体点少于此就放弃整片（不判墙也不丢点）
+
+            /* ── 墙片拆成竖平面（wall_extract.h 的「直角墙」一节）──────────
+               上面两步判的是「它是不是墙」，判不出「它是不是**一面**墙」。
+               一面 L 形的直角墙在 DBSCAN 眼里是一张连续曲面，天然连成一片，
+               整片发出去就是 MinRotateRect 给的那个 6.35 × 11.39 m 的大框：
+               中心落在房间当中、框横跨整个转角，站在墙边的物体全被圈在里面
+               （实测 111 点那个有 67/111 个点在这个框内）—— 用户看到的
+               「直角的墙连带旁边的物品聚成一团」就是这个框。
+               拆成竖平面之后每张面各发一个目标，框变成约 8.0 × 0.3 m 与
+               7.7 × 0.9 m，贴着墙走。15 帧真机实测 15/15 帧稳定拆成 2 面。
+               wall_face_split=false 时整条路径不生效（一片墙仍是一个目标），
+               真机 A/B 靠这一点。 */
+            bool   wall_face_split     = true;
+            int    wall_face_min_pts   = 40;    // 一张面的点数下限；片不足 2 倍就不拆
+            int    wall_face_iter      = 500;   // RANSAC 抽样次数
+            double wall_face_tol       = 0.12;  // 点到面的距离容差
+            double wall_face_max_tilt  = 0.35;  // |n_z| 上限：只收近竖直的面
+            double wall_face_link      = 0.60;  // 面内 XY 连通半径
+            double wall_face_merge_deg = 25.0;  // 方向差小于它就考虑并面
+            double wall_face_merge_gap = 0.80;  // 端点最近距离小于它才并
+            double wall_face_merge_thin = 0.15; // 并完还得是薄面（宽/长），否则不许并
 
             /* ── 地面分割 / 体素分辨率 ──────────────────────────────────
                地面分割与聚类用**两个不同的体素**。原因：PMF 的形态学开运算拿窗口

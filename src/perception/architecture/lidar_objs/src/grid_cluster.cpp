@@ -399,6 +399,30 @@ namespace perception
                 if (value.isMember("wall_max_thin"))         conf.wall_max_thin = value["wall_max_thin"].asDouble();
                 if (value.isMember("wall_min_span"))         conf.wall_min_span = value["wall_min_span"].asDouble();
 
+                /* 片内局部密度过滤。同上的坑：wall_density_drop 缺键时 asBool() 给
+                   false —— 那等于**静默关掉丢散点**，而只滤不丢恰恰是不管用的那个
+                   变体（实测非墙最大簇 123 → 207），所以这行也归到「每次 A/B 都要
+                   看 Configure 日志」里。 */
+                if (value.isMember("wall_density_drop"))      conf.wall_density_drop = value["wall_density_drop"].asBool();
+                if (value.isMember("wall_density_tau"))       conf.wall_density_tau = value["wall_density_tau"].asDouble();
+                if (value.isMember("wall_density_k"))         conf.wall_density_k = value["wall_density_k"].asInt();
+                if (value.isMember("wall_density_min_piece")) conf.wall_density_min_piece = value["wall_density_min_piece"].asInt();
+                if (value.isMember("wall_density_min_pts"))   conf.wall_density_min_pts = value["wall_density_min_pts"].asInt();
+
+                /* 墙片拆竖平面（SplitWallFaces）。最阴的一个仍然是 bool：
+                   wall_face_split 缺键时 asBool() 给 false —— 那等于静默退回
+                   「一片直角墙算一个目标」，用户看到的就是那个横跨房间的大框。
+                   所以这行也归到「每次都要看 Configure 的 wall face cfg 日志」里。 */
+                if (value.isMember("wall_face_split"))        conf.wall_face_split = value["wall_face_split"].asBool();
+                if (value.isMember("wall_face_min_pts"))      conf.wall_face_min_pts = value["wall_face_min_pts"].asInt();
+                if (value.isMember("wall_face_iter"))         conf.wall_face_iter = value["wall_face_iter"].asInt();
+                if (value.isMember("wall_face_tol"))          conf.wall_face_tol = value["wall_face_tol"].asDouble();
+                if (value.isMember("wall_face_max_tilt"))     conf.wall_face_max_tilt = value["wall_face_max_tilt"].asDouble();
+                if (value.isMember("wall_face_link"))         conf.wall_face_link = value["wall_face_link"].asDouble();
+                if (value.isMember("wall_face_merge_deg"))    conf.wall_face_merge_deg = value["wall_face_merge_deg"].asDouble();
+                if (value.isMember("wall_face_merge_gap"))    conf.wall_face_merge_gap = value["wall_face_merge_gap"].asDouble();
+                if (value.isMember("wall_face_merge_thin"))   conf.wall_face_merge_thin = value["wall_face_merge_thin"].asDouble();
+
                 /* 地面分割与体素分辨率。同样用 isMember：缺 ground_method 会变成 0，
                    而 1/2 两个分支都不匹配 0，会静默走错。 */
                 if (value.isMember("ground_method"))      conf.ground_method = value["ground_method"].asInt();
